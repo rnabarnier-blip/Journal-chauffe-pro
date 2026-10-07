@@ -1,0 +1,34 @@
+CHAUFFES PRO — version d'essai du Journal de chauffes
+====================================================
+
+C'est une app SÉPARÉE. Elle ne touche pas à ton Journal de chauffes :
+- ses notes sont rangées ailleurs sur le téléphone (même adresse github.io, mais stockage différent) ;
+- pas de partage automatique avec l'équipe (pour ne pas mélanger les essais avec les vraies notes) ;
+- son fichier de partage est refusé par l'app d'origine, donc impossible de l'importer là-bas par erreur ;
+- icône bordeaux, nom « Chauffes Pro » : impossible de confondre les deux.
+
+NOUVEAUTÉS
+1. Seuils d'alerte (Infos → Modifier) : minimum / maximum dans les palox, variation max. d'un jour à l'autre,
+   rappel si pas de relevé depuis X heures. Alertes à la saisie, sur la courbe (lignes rouges) et dans le suivi.
+2. Humidité (%) dans chaque relevé.
+3. Import d'un enregistreur de température (Saisie → en bas) : fichier .csv ou .xlsx exporté depuis le capteur.
+   L'app trouve les colonnes date/heure, température, humidité, et range les mesures par jour.
+4. Onglet Bilan : à la sortie de chauffe, plants triés / plants bons par lot → taux de réussite,
+   par porte-greffe et par variété.
+5. Comparer les saisons (Accueil) : vue d'ensemble des chauffes, courbes de température superposées,
+   réussite par variété × porte-greffe d'une chauffe à l'autre.
+6. Registre de traçabilité (Suivi → Registre) : document imprimable / PDF avec lots, conditions jour par jour,
+   observations, intervenants et visa. Nom de la pépinière dans Réglages.
+7. Français / Español (Réglages, ou dès l'écran de bienvenue).
+
+MISE EN LIGNE (depuis l'iPad, comme la première fois)
+1. Décompresse le .zip dans Fichiers : un dossier « chauffes-pro » apparaît.
+2. Sur github.com : « + » → « New repository ». Nom : chauffes-pro (PAS journal-chauffes). Coche « Public ». Create.
+3. « uploading an existing file » → choisis TOUS les fichiers du dossier → « Commit changes ».
+4. Settings → Pages → Branch « main » → Save.
+5. Après 1 à 2 minutes : https://rnabarnier-blip.github.io/chauffes-pro/
+6. Ouvre l'adresse dans Safari → Partager → « Sur l'écran d'accueil ».
+
+ESSAYER AVEC TES VRAIES NOTES
+Dans le Journal de chauffes : « Partager mes notes » → Enregistrer dans Fichiers.
+Dans Chauffes Pro : « Importer » → choisis ce fichier. Ton Journal de chauffes n'est pas modifié.

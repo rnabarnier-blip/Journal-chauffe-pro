@@ -1,0 +1,30 @@
+{
+ "id": "./?app=chauffes-pro",
+ "name": "Chauffes Pro",
+ "short_name": "Chauffes Pro",
+ "description": "Version d'essai du Journal de chauffes : seuils et capteurs, bilan, comparaison des saisons, traçabilité, français / espagnol.",
+ "lang": "fr",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f3efef",
+ "theme_color": "#7a2e3e",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
