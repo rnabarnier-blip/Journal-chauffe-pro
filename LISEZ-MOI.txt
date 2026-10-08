@@ -9,8 +9,11 @@ C'est une app SÉPARÉE. Elle ne touche pas à ton Journal de chauffes :
 
 NOUVEAUTÉS
 1. Seuils d'alerte (Infos → Modifier) : minimum / maximum dans les palox, variation max. d'un jour à l'autre,
-   rappel si pas de relevé depuis X heures. Alertes à la saisie, sur la courbe (lignes rouges) et dans le suivi.
-2. Chaque relevé : température et humidité (%) dans la pièce ET dans le palox.
+   montée en température (pas d'alerte de température avant la fin de la montée), seuils d'humidité
+   (palox min/max, pièce min), rappel si pas de relevé depuis X heures. Alertes à la saisie, sur la courbe (lignes rouges) et dans le suivi.
+2. Chaque relevé : température, humidité (%) et oxygène O₂ (%) dans la pièce ET dans le palox,
+   avec une courbe de l'humidité, une courbe de l'oxygène, et une vue d'ensemble qui montre les trois
+   en même temps (Suivi et registre PDF).
 8. Traitements phytosanitaires (Saisie → carte « Traitements ») : produit, matière active, dose + unité,
    méthode, cible, volume de bouillie. Repris dans le Suivi, l'onglet Infos, le registre PDF et l'export Excel.
 3. Import d'un enregistreur de température (Saisie → en bas) : fichier .csv ou .xlsx exporté depuis le capteur.
@@ -27,17 +30,17 @@ NOUVEAUTÉS
 
 MISE EN LIGNE (depuis l'iPad, comme la première fois)
 1. Décompresse le .zip dans Fichiers : un dossier « chauffes-pro » apparaît.
-2. Sur github.com : « + » → « New repository ». Nom : chauffes-pro (PAS journal-chauffes). Coche « Public ». Create.
+2. Sur github.com : « + » → « New repository ». Nom : Journal-chauffe-pro (PAS journal-chauffes). Coche « Public ». Create.
 3. « uploading an existing file » → choisis TOUS les fichiers du dossier → « Commit changes ».
 4. Settings → Pages → Branch « main » → Save.
-5. Après 1 à 2 minutes : https://rnabarnier-blip.github.io/chauffes-pro/
+5. Après 1 à 2 minutes : https://rnabarnier-blip.github.io/Journal-chauffe-pro/
 6. Ouvre l'adresse dans Safari → Partager → « Sur l'écran d'accueil ».
 
 ESSAYER AVEC TES VRAIES NOTES
 Dans le Journal de chauffes : « Partager mes notes » → Enregistrer dans Fichiers.
 Dans Chauffes Pro : « Importer » → choisis ce fichier. Ton Journal de chauffes n'est pas modifié.
 
-METTRE À JOUR L'APP (version 2.2.0)
-Dans le dépôt chauffes-pro sur GitHub : « Add file » → « Upload files » → choisis index.html et sw.js
+METTRE À JOUR L'APP (version 2.6.0)
+Dans le dépôt Journal-chauffe-pro sur GitHub : « Add file » → « Upload files » → choisis index.html et sw.js
 (tu peux aussi remettre tous les fichiers) → « Commit changes ».
 Au prochain lancement avec internet, l'app propose « Recharger ». Tes notes ne sont pas touchées.
