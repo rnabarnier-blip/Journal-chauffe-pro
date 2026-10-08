@@ -221,6 +221,13 @@ details.sensor:not([open]){gap:0}
 .homebtns .ghost{min-height:50px;background:var(--surface)}
 .chauffecard .rappel{font-size:13px;color:var(--warn);font-weight:600}
 .langseg{max-width:320px}
+.cbsel{display:grid;gap:6px}
+.cbrow{display:grid;grid-template-columns:minmax(92px,auto) 1fr 1fr;gap:6px;align-items:center}
+.cbname{font-weight:700;font-size:14px}
+.cbtog{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;font:600 14px var(--f-body);cursor:pointer;padding:6px 8px}
+.cbtog i{display:inline-block;width:18px}
+.cbtog[aria-pressed="true"]{background:var(--surface);color:var(--fg);border-color:var(--fg)}
+.cbtog[aria-pressed="false"] i{opacity:.35}
 .phrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;background:var(--sunk);border-radius:8px;padding:10px 12px;font-size:15px}
 .phrow .mono{font-size:13.5px}
 .phrow .lotact{flex-direction:column}
@@ -263,7 +270,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -344,7 +351,7 @@ async function loadAll(){
   S.seedHidden=!!(await DB.get('reglages','seedHidden'));
   S.lang=(await DB.get('reglages','lang'))||S.lang;
   S.etab=Object.assign({nom:'',lieu:'',agrement:''},(await DB.get('reglages','etab'))||{});
-  try{ const v=localStorage.getItem(LS+'courbe'); if(['in','ext','both'].includes(v)) S.courbe=v; }catch(e){}
+  try{ const v=localStorage.getItem(LS+'courbe'); if(['in','ext','both'].includes(v)) S.courbe=v; ['hv','ov'].forEach(k=>{ const x=localStorage.getItem(LS+k); if(['in','ext','both'].includes(x)) S[k]=x; }); }catch(e){}
 }
 const liveChauffes = () => S.chauffes.filter(c=>!c.supprime).sort((a,b)=>(a.archive?1:0)-(b.archive?1:0) || (b.creeLe||'').localeCompare(a.creeLe||''));
 const curChauffe = () => S.chauffes.find(c=>c.id===S.chauffeId);
@@ -1264,9 +1271,9 @@ function tabJour(ch, body){
 
 /* ----- Onglet Historique ----- */
 function tabHist(ch, body){
-  const cb=comboSVG(ch,false);
+  const cb=comboSVG(ch,false,{mode:'sep',show:CB_DEFAULT.show});
   body.innerHTML=`
-    ${cb?`<div class="card" style="gap:10px"><h3 class="ctitle">${esc(L("Vue d'ensemble : température, humidité, oxygène","Resumen: temperatura, humedad, oxígeno"))}</h3><p class="note">${esc(L('Moyenne de chaque jour. Touche un jour pour voir les trois valeurs.','Promedio de cada día. Toca un día para ver los tres valores.'))}</p>${cb}<div class="tip" id="cb-tip">${esc(L('Touche un jour sur le graphique.','Toca un día en el gráfico.'))}</div></div>`:''}
+    ${cb?`<div class="card" style="gap:10px"><h3 class="ctitle">${esc(L("Vue d'ensemble : température, humidité, oxygène","Resumen: temperatura, humedad, oxígeno"))}</h3><p class="note">${esc(L('Moyenne de chaque jour. Choisis les courbes à afficher, sépare-les ou superpose-les. Touche un jour pour voir les valeurs.','Promedio de cada día. Elige las curvas, sepáralas o superponlas. Toca un día para ver los valores.'))}</p>${comboControlsHTML()}<div id="cb-wrap"></div><div class="tip" id="cb-tip">${esc(L('Touche un jour sur le graphique.','Toca un día en el gráfico.'))}</div></div>`:''}
     <div class="card" style="gap:10px">
       <h3 class="ctitle" id="g-title">Températures</h3>
       <p class="note">Chaque point est un relevé. Touche un point pour voir sa valeur.</p>
@@ -1277,11 +1284,11 @@ function tabHist(ch, body){
     </div>
     <div class="card" style="gap:10px">
       <h3 class="ctitle">${esc(L('Humidité relative (%)','Humedad relativa (%)'))}</h3>
-      ${humSVG(ch,false)||`<p class="note">${esc(L("Aucune humidité relevée pour l'instant : ajoute-la dans l'onglet Saisie (pièce et palox).","Ninguna humedad registrada por ahora: agrégala en la pestaña Ingreso (sala y palox)."))}</p>`}
+      ${humSVG(ch,false)?pairSegHTML('h-view',S.hv||'both')+'<div id="h-wrap"></div>':`<p class="note">${esc(L("Aucune humidité relevée pour l'instant : ajoute-la dans l'onglet Saisie (pièce et palox).","Ninguna humedad registrada por ahora: agrégala en la pestaña Ingreso (sala y palox)."))}</p>`}
     </div>
     <div class="card" style="gap:10px">
       <h3 class="ctitle">${esc(L('Oxygène O₂ (%)','Oxígeno O₂ (%)'))}</h3>
-      ${o2SVG(ch,false)||`<p class="note">${esc(L("Aucun taux d'oxygène relevé pour l'instant : ajoute-le dans l'onglet Saisie (pièce et palox).","Ningún nivel de oxígeno registrado por ahora: agrégalo en la pestaña Ingreso (sala y palox)."))}</p>`}
+      ${o2SVG(ch,false)?pairSegHTML('o-view',S.ov||'both')+'<div id="o-wrap"></div>':`<p class="note">${esc(L("Aucun taux d'oxygène relevé pour l'instant : ajoute-le dans l'onglet Saisie (pièce et palox).","Ningún nivel de oxígeno registrado por ahora: agrégalo en la pestaña Ingreso (sala y palox)."))}</p>`}
     </div>
     <div class="card" style="gap:10px">
       <h3>Partager cette chauffe</h3>
@@ -1293,7 +1300,10 @@ function tabHist(ch, body){
     </div>
     <p class="note">Touche un jour pour le compléter ou le corriger.</p>
     <div class="list" id="g-days"></div>`;
-  drawChart(ch); bindCombo(ch);
+  drawChart(ch); bindComboControls(ch); drawCombo(ch);
+  const pairBind=(segId,wrapId,key,fn)=>{ const seg=$(segId); if(!seg) return; const draw=()=>{ $(wrapId).innerHTML=fn(ch,false,S[key]||'both'); }; draw();
+    seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ S[key]=b.dataset.v; try{ localStorage.setItem(LS+key,S[key]); }catch(e){} seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); draw(); }); };
+  pairBind('h-view','h-wrap','hv',humSVG); pairBind('o-view','o-wrap','ov',o2SVG);
   $('g-reg').onclick=()=>go('registre');
   const DS=dayStats(ch);
   const el=$('g-days');
@@ -1759,36 +1769,72 @@ function comboData(ch){
   const m=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10:null;
   return days.map(d=>({j:d.j, tI:m(d.tI), tE:m(d.tE), hI:m(d.hI), hE:m(d.hE), oI:m(d.oI), oE:m(d.oE)}));
 }
-function comboSVG(ch, print){
+const CB_VARS=[
+  {k:'t', unit:'°C', col:'#d0533f', name:()=>L('Température','Temperatura'), short:()=>'T°'},
+  {k:'h', unit:'%',  col:'#0f8a8a', name:()=>L('Humidité','Humedad'), short:()=>'HR'},
+  {k:'o', unit:'%',  col:'#2f6fc0', name:()=>L('Oxygène O₂','Oxígeno O₂'), short:()=>'O₂'}];
+const CB_DEFAULT={mode:'sep', show:{tI:true,tE:true,hI:true,hE:true,oI:true,oE:true}};
+function cbOpt(){ if(!S.cb){ let o=null; try{ o=JSON.parse(localStorage.getItem(LS+'combo')||'null'); }catch(e){} S.cb=o&&o.show?o:JSON.parse(JSON.stringify(CB_DEFAULT)); } return S.cb; }
+function cbSave(){ try{ localStorage.setItem(LS+'combo',JSON.stringify(S.cb)); }catch(e){} }
+function cbLines(ch,k){ const SU=seuilsOf(ch); return k==='t'?[[SU.inMax,L('max','máx'),'I'],[SU.inMin,L('min','mín'),'I']]:k==='h'?[[SU.hInMax,L('max','máx'),'I'],[SU.hInMin,L('min','mín'),'I'],[SU.hExtMin,L('min pièce','mín sala'),'E']]:[[SU.o2Min,L('min','mín'),'I']]; }
+function comboSVG(ch, print, opt){
+  opt=opt||cbOpt(); const sh=opt.show;
   const C=chartInk(print), D=ch.duree, data=comboData(ch), SU=seuilsOf(ch);
-  const panels=[
-    {k:'t', title:L('Température (°C)','Temperatura (°C)'), unit:'°', col:print?'#c0392b':'#d0533f', lines:[[SU.inMax,L('max','máx'),'in'],[SU.inMin,L('min','mín'),'in']], from:SU.montee},
-    {k:'h', title:L('Humidité (%)','Humedad (%)'), unit:'%', col:'#0f8a8a', lines:[[SU.hInMax,L('max','máx'),'in'],[SU.hInMin,L('min','mín'),'in'],[SU.hExtMin,L('min pièce','mín sala'),'ext']]},
-    {k:'o', title:L('Oxygène O₂ (%)','Oxígeno O₂ (%)'), unit:'%', col:'#2f6fc0', lines:[[SU.o2Min,L('min','mín'),'in']]}
-  ].filter(P=>data.some(d=>d[P.k+'I']!=null||d[P.k+'E']!=null));
-  if(!panels.length) return '';
-  const W=640, ml=40, mr=58, pw=W-ml-mr, PH=104, gap=30, top=10, H=top+panels.length*(PH+gap)+14;
-  const X=j=>ml+(j-0.5)/D*pw; const mono='font-family="ui-monospace,Menlo,monospace"', sans='font-family="system-ui,sans-serif"';
-  let g=`<rect x="0" y="0" width="${W}" height="${H}" fill="${print?C.bg:'none'}"></rect>`;
-  // zones communes : montée et fin prévue
-  const yA=top, yB=top+panels.length*(PH+gap)-gap;
-  g+=`<rect x="${ml+(ch.finDe-1)/D*pw}" y="${yA}" width="${(ch.finA-ch.finDe+1)/D*pw}" height="${yB-yA}" fill="${C.zone}" opacity=".8"></rect>`;
-  panels.forEach((P,i)=>{
-    const y0=top+i*(PH+gap)+16, y1=y0+PH-16;
-    const vals=data.flatMap(d=>[d[P.k+'I'],d[P.k+'E']]).filter(v=>v!=null).concat(P.lines.map(l=>l[0]).filter(v=>v!=null));
-    let lo=Math.min(...vals), hi=Math.max(...vals); const pad=Math.max(0.5,(hi-lo)*0.12); lo-=pad; hi+=pad; if(P.k==='h') hi=Math.min(100,hi); if(hi-lo<1){ hi+=0.5; lo-=0.5; }
-    const Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
-    g+=`<text x="${ml}" y="${y0-5}" font-size="12" font-weight="700" fill="${C.strong}" ${sans}>${esc(P.title)}</text>`;
-    [lo,(lo+hi)/2,hi].forEach(v=>{ g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${C.grid}"></line><text x="${ml-5}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" font-size="10" fill="${C.text}" ${mono}>${fmtN(Math.round(v*(hi-lo<6?10:1))/(hi-lo<6?10:1))}${P.unit}</text>`; });
-    P.lines.forEach(([v,lab])=>{ if(v==null) return; const x0=(P.k==='t'&&P.from!=null)?ml+P.from/D*pw:ml; g+=`<line x1="${x0}" x2="${ml+pw}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${C.bad}" stroke-width="1.1" stroke-dasharray="4 4"></line><text x="${ml+pw+3}" y="${(Y(v)+3.5).toFixed(1)}" font-size="9.5" fill="${C.bad}" ${sans}>${esc(lab)} ${fmtN(v)}</text>`; });
-    [['E',true],['I',false]].forEach(([w,dash])=>{ const pts=data.filter(d=>d[P.k+w]!=null).map(d=>[X(d.j),Y(d[P.k+w])]); if(!pts.length) return;
-      if(pts.length>1) g+=`<polyline fill="none" stroke="${P.col}" stroke-width="${dash?1.5:2.2}" ${dash?'stroke-dasharray="5 4" opacity=".75"':''} stroke-linejoin="round" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"></polyline>`;
-      pts.forEach(p=>{ g+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${dash?2.4:3}" fill="${dash?C.bg:P.col}" stroke="${P.col}" stroke-width="1.4"></circle>`; }); });
-  });
+  const vars=CB_VARS.map(v=>Object.assign({},v,{ser:['I','E'].filter(w=>sh[v.k+w] && data.some(d=>d[v.k+w]!=null))})).filter(v=>v.ser.length);
+  if(!vars.length) return '';
+  const W=640, mono='font-family="ui-monospace,Menlo,monospace"', sans='font-family="system-ui,sans-serif"';
+  const scale=(v,lo0,hi0)=>{ const vals=data.flatMap(d=>v.ser.map(w=>d[v.k+w])).filter(x=>x!=null).concat(cbLines(ch,v.k).filter(l=>v.ser.includes(l[2])&&l[0]!=null).map(l=>l[0]));
+    let lo=Math.min(...vals), hi=Math.max(...vals); const pad=Math.max(0.5,(hi-lo)*0.12); lo-=pad; hi+=pad; if(v.k!=='t') hi=Math.min(100,hi); if(hi-lo<1){ hi+=0.5; lo-=0.5; } return [lo,hi]; };
+  const tick=(v,lo,hi)=>{ const dec=hi-lo<6?10:1; return fmtN(Math.round(v*dec)/dec); };
+  const drawSeries=(v,X,Y)=>{ let g=''; v.ser.slice().sort((a,b)=>a==='E'?-1:1).forEach(w=>{ const dash=w==='E'; const pts=data.filter(d=>d[v.k+w]!=null).map(d=>[X(d.j),Y(d[v.k+w])]);
+      if(pts.length>1) g+=`<polyline fill="none" stroke="${v.col}" stroke-width="${dash?1.5:2.2}" ${dash?'stroke-dasharray="5 4" opacity=".8"':''} stroke-linejoin="round" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"></polyline>`;
+      pts.forEach(p=>{ g+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${dash?2.4:3}" fill="${dash?C.bg:v.col}" stroke="${v.col}" stroke-width="1.4"></circle>`; }); }); return g; };
+  let g='', H, yA, yB, ml=40, mr, pw, X;
+  if(opt.mode==='sup'){
+    // Superposé : un seul graphique, une échelle par mesure (axes colorés à gauche et à droite).
+    const axes=vars.length; ml=axes>=1?44:40; mr=axes>=3?100:axes===2?54:58; pw=W-ml-mr; const top=28, ph=230; H=top+ph+30; yA=top; yB=top+ph;
+    X=j=>ml+(j-0.5)/D*pw;
+    g+=`<rect x="0" y="0" width="${W}" height="${H}" fill="${print?C.bg:'none'}"></rect>`;
+    g+=`<rect x="${ml+(ch.finDe-1)/D*pw}" y="${yA}" width="${(ch.finA-ch.finDe+1)/D*pw}" height="${yB-yA}" fill="${C.zone}" opacity=".8"></rect>`;
+    for(let i=0;i<=4;i++){ const y=yA+i*(yB-yA)/4; g+=`<line x1="${ml}" x2="${ml+pw}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${C.grid}"></line>`; }
+    vars.forEach((v,i)=>{ const [lo,hi]=scale(v); const Y=x=>yB-(x-lo)/(hi-lo)*(yB-yA);
+      const ax= i===0 ? {x:ml-5, anchor:'end'} : {x:ml+pw+5+(i-1)*46, anchor:'start'};
+      for(let t=0;t<=4;t++){ const val=lo+t*(hi-lo)/4; g+=`<text x="${ax.x}" y="${(Y(val)+3.5).toFixed(1)}" text-anchor="${ax.anchor}" font-size="9.5" fill="${v.col}" ${mono}>${tick(val,lo,hi)}${v.unit==='°C'?'°':'%'}</text>`; }
+      g+=`<text x="${ax.x}" y="${yA-12}" text-anchor="${ax.anchor}" font-size="11" font-weight="700" fill="${v.col}" ${sans}>${esc(v.short())}</text>`;
+      cbLines(ch,v.k).forEach(([val,lab,w])=>{ if(val==null||!v.ser.includes(w)) return; const x0=(v.k==='t'&&SU.montee!=null)?ml+SU.montee/D*pw:ml; g+=`<line x1="${x0}" x2="${ml+pw}" y1="${Y(val).toFixed(1)}" y2="${Y(val).toFixed(1)}" stroke="${v.col}" stroke-width="1" stroke-dasharray="2 4" opacity=".9"></line>`; });
+      g+=drawSeries(v,X,Y); });
+  } else {
+    // Séparés : une bande par mesure, alignées sur les mêmes jours.
+    mr=58; pw=W-ml-mr; const PH=104, gap=30, top=10; H=top+vars.length*(PH+gap)+14; yA=top; yB=top+vars.length*(PH+gap)-gap;
+    X=j=>ml+(j-0.5)/D*pw;
+    g+=`<rect x="0" y="0" width="${W}" height="${H}" fill="${print?C.bg:'none'}"></rect>`;
+    g+=`<rect x="${ml+(ch.finDe-1)/D*pw}" y="${yA}" width="${(ch.finA-ch.finDe+1)/D*pw}" height="${yB-yA}" fill="${C.zone}" opacity=".8"></rect>`;
+    vars.forEach((v,i)=>{ const y0=top+i*(PH+gap)+16, y1=y0+PH-16; const [lo,hi]=scale(v); const Y=x=>y1-(x-lo)/(hi-lo)*(y1-y0);
+      g+=`<text x="${ml}" y="${y0-5}" font-size="12" font-weight="700" fill="${C.strong}" ${sans}>${esc(v.name()+' ('+v.unit+')')}</text>`;
+      [lo,(lo+hi)/2,hi].forEach(x=>{ g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(x).toFixed(1)}" y2="${Y(x).toFixed(1)}" stroke="${C.grid}"></line><text x="${ml-5}" y="${(Y(x)+4).toFixed(1)}" text-anchor="end" font-size="10" fill="${C.text}" ${mono}>${tick(x,lo,hi)}${v.unit==='°C'?'°':'%'}</text>`; });
+      cbLines(ch,v.k).forEach(([val,lab,w])=>{ if(val==null||!v.ser.includes(w)) return; const x0=(v.k==='t'&&SU.montee!=null)?ml+SU.montee/D*pw:ml; g+=`<line x1="${x0}" x2="${ml+pw}" y1="${Y(val).toFixed(1)}" y2="${Y(val).toFixed(1)}" stroke="${C.bad}" stroke-width="1.1" stroke-dasharray="4 4"></line><text x="${ml+pw+3}" y="${(Y(val)+3.5).toFixed(1)}" font-size="9.5" fill="${C.bad}" ${sans}>${esc(lab)} ${fmtN(val)}</text>`; });
+      g+=drawSeries(v,X,Y); });
+  }
   const st=Math.max(1,Math.ceil(D/10)); for(let j=1;j<=D;j+=st) g+=`<text x="${X(j)}" y="${H-4}" text-anchor="middle" font-size="10.5" fill="${C.text}" ${mono}>J${j}</text>`;
   if(!print){ for(let j=1;j<=D;j++) g+=`<rect class="khit" data-j="${j}" x="${(X(j)-pw/D/2).toFixed(1)}" y="${yA}" width="${(pw/D).toFixed(1)}" height="${yB-yA}" fill="transparent"></rect>`; g+=`<line id="cb-cur" x1="0" x2="0" y1="${yA}" y2="${yB}" stroke="${C.strong}" stroke-width="1" opacity="0"></line>`; }
-  const leg=`<span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px"><i style="display:inline-block;width:18px;border-top:2.5px solid ${C.strong}"></i>${esc(L('dans le palox','dentro del palox'))}</span><span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px"><i style="display:inline-block;width:18px;border-top:2px dashed ${C.text}"></i>${esc(L('pièce','sala'))}</span><span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;border-top:2px dashed ${C.bad}"></i>${esc(L('seuils','umbrales'))}</span>`;
+  const sw=(c,dash)=>`<i style="display:inline-block;width:18px;border-top:${dash?'2px dashed':'2.5px solid'} ${c}"></i>`;
+  const leg=vars.map(v=>v.ser.map(w=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px">${sw(v.col,w==='E')}${esc(v.short()+' '+(w==='I'?L('palox','palox'):L('pièce','sala')))}</span>`).join('')).join('')+
+    `<span style="display:inline-flex;align-items:center;gap:5px">${sw(opt.mode==='sup'?C.text:C.bad,true)}${esc(L('seuils','umbrales'))}</span>`;
   return `<svg class="combo" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(L('Température, humidité et oxygène, jour par jour','Temperatura, humedad y oxígeno, día por día'))}" style="display:block;width:100%;height:auto">${g}</svg><div style="font-size:12.5px;color:${C.text};display:flex;flex-wrap:wrap;gap:4px 0">${leg}</div>`;
+}
+function comboControlsHTML(){ const o=cbOpt();
+  return `<div class="seg" id="cb-mode" role="group" aria-label="${esc(L('Affichage','Visualización'))}"><button type="button" data-v="sep" aria-pressed="${o.mode==='sep'}">${esc(L('Séparés','Separados'))}</button><button type="button" data-v="sup" aria-pressed="${o.mode==='sup'}">${esc(L('Superposés','Superpuestos'))}</button></div>
+    <div class="cbsel" id="cb-sel" role="group" aria-label="${esc(L('Courbes affichées','Curvas mostradas'))}">${CB_VARS.map(v=>`<div class="cbrow"><span class="cbname" style="color:${v.col}">${esc(v.name())}</span>${['I','E'].map(w=>`<button type="button" class="cbtog" data-s="${v.k+w}" aria-pressed="${!!o.show[v.k+w]}"><i style="border-top:${w==='E'?'2px dashed':'3px solid'} ${v.col}"></i>${esc(w==='I'?L('Palox','Palox'):L('Pièce','Sala'))}</button>`).join('')}</div>`).join('')}</div>`;
+}
+function drawCombo(ch){
+  const wrap=$('cb-wrap'); if(!wrap) return; const svg=comboSVG(ch,false);
+  wrap.innerHTML=svg||`<p class="note">${esc(L('Aucune courbe choisie ou pas encore de relevé pour ces mesures.','Ninguna curva elegida o todavía no hay lecturas para estas mediciones.'))}</p>`;
+  bindCombo(ch);
+}
+function bindComboControls(ch){
+  const o=cbOpt(); if(!$('cb-mode')) return;
+  $('cb-mode').querySelectorAll('button').forEach(b=>b.onclick=()=>{ o.mode=b.dataset.v; cbSave(); $('cb-mode').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); drawCombo(ch); });
+  $('cb-sel').querySelectorAll('.cbtog').forEach(b=>b.onclick=()=>{ o.show[b.dataset.s]=!o.show[b.dataset.s]; cbSave(); b.setAttribute('aria-pressed',!!o.show[b.dataset.s]); drawCombo(ch); });
 }
 function bindCombo(ch){
   const svg=document.querySelector('svg.combo'); if(!svg) return; const data=comboData(ch), tip=$('cb-tip'), cur=svg.querySelector('#cb-cur');
@@ -1796,11 +1842,14 @@ function bindCombo(ch){
   svg.querySelectorAll('.khit').forEach(r=>r.onclick=()=>{ const d=data[Number(r.dataset.j)-1]; const x=Number(r.getAttribute('x'))+Number(r.getAttribute('width'))/2; cur.setAttribute('x1',x); cur.setAttribute('x2',x); cur.setAttribute('opacity','.5');
     tip.innerHTML=`<b>J${d.j}${ch.debut?' · '+esc(dayLabel(ch,d.j)):''}</b><br>${esc(L('Palox','Palox'))} : ${f(d.tI,' °C')} · ${f(d.hI,' %')} · O₂ ${f(d.oI,' %')}<br>${esc(L('Pièce','Sala'))} : ${f(d.tE,' °C')} · ${f(d.hE,' %')} · O₂ ${f(d.oE,' %')}`; });
 }
+function pairSegHTML(id,cur){ return `<div class="seg" id="${id}" role="group"><button type="button" data-v="in" aria-pressed="${cur==='in'}">${esc(L('Dans le palox','En el palox'))}</button><button type="button" data-v="ext" aria-pressed="${cur==='ext'}">${esc(L('Pièce','Sala'))}</button><button type="button" data-v="both" aria-pressed="${cur==='both'}">${esc(L('Superposer','Superponer'))}</button></div>`; }
 /* Courbe à deux séries (pièce / palox) pour l'humidité et l'oxygène. */
 function pairSVG(ch, print, cfg){
   const C=chartInk(print); const D=ch.duree; const room=cfg.room, palox=cfg.palox;
-  const P={ext:[],in:[]}; releves(ch.id).forEach(r=>{ const t=r.jour-1+hourOf(r)/24; const e=cfg.getExt(r), i=cfg.getIn(r); if(e!=null) P.ext.push({t,v:e,r}); if(i!=null) P.in.push({t,v:i,r}); });
+  const which=cfg.which||'both';
+  const P={ext:[],in:[]}; releves(ch.id).forEach(r=>{ const t=r.jour-1+hourOf(r)/24; const e=cfg.getExt(r), i=cfg.getIn(r); if(e!=null&&which!=='in') P.ext.push({t,v:e,r}); if(i!=null&&which!=='ext') P.in.push({t,v:i,r}); });
   const all=P.ext.concat(P.in).map(p=>p.v); if(!all.length) return '';
+  cfg.lines=cfg.lines.filter(x=>x[1]==='both'||which==='both'||x[1]===which);
   const W=640,H=240,ml=38,mr=62,mt=16,mb=30,pw=W-ml-mr,ph=H-mt-mb;
   const lims=cfg.lines.filter(x=>x[0]!=null); const span=all.concat(lims.map(x=>x[0]));
   let [lo,hi,step]=cfg.range(Math.min(...span),Math.max(...span));
@@ -1816,17 +1865,17 @@ function pairSVG(ch, print, cfg){
   const leg=[['ext',L('Pièce (hors palox)','Sala (fuera del palox)'),room],['in',L('Dans le palox','Dentro del palox'),palox]].filter(([k])=>P[k].length).map(([k,lab,c])=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px"><i style="display:inline-block;width:16px;height:3px;background:${c}"></i>${esc(lab)}</span>`).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.title)}" style="display:block;width:100%;height:auto">${g}</svg><div style="font-size:12.5px;color:${C.text};display:flex;flex-wrap:wrap;gap:4px 0">${leg}</div>`;
 }
-function humSVG(ch, print){ const S2=seuilsOf(ch);
-  return pairSVG(ch, print, {title:L("Courbe de l'humidité",'Curva de la humedad'), room:'#c27c0e', palox:'#0f8a8a', getExt:hOut, getIn:hIn,
+function humSVG(ch, print, which){ const S2=seuilsOf(ch);
+  return pairSVG(ch, print, {which, title:L("Courbe de l'humidité",'Curva de la humedad'), room:'#c27c0e', palox:'#0f8a8a', getExt:hOut, getIn:hIn,
     lines:[[S2.hInMin,'in',L('min palox','mín palox')],[S2.hInMax,'in',L('max palox','máx palox')],[S2.hExtMin,'ext',L('min pièce','mín sala')]],
     range:(mn)=>{ let lo=Math.max(0,Math.floor((mn-5)/10)*10), hi=100; if(hi-lo<20) lo=hi-20; return [lo,hi,(hi-lo)>40?20:10]; }}); }
-function o2SVG(ch, print){ const S2=seuilsOf(ch);
-  return pairSVG(ch, print, {title:L("Courbe de l'oxygène",'Curva del oxígeno'), room:'#6b4fa3', palox:'#2f6fc0', getExt:r=>r.o2Ext??null, getIn:r=>r.o2Int??null,
-    lines:[[S2.o2Min,'both',L('min O₂','mín O₂')],[20.9,'ext',L('air 20,9','aire 20,9')]],
+function o2SVG(ch, print, which){ const S2=seuilsOf(ch);
+  return pairSVG(ch, print, {which, title:L("Courbe de l'oxygène",'Curva del oxígeno'), room:'#6b4fa3', palox:'#2f6fc0', getExt:r=>r.o2Ext??null, getIn:r=>r.o2Int??null,
+    lines:[[S2.o2Min,'both',L('min O₂','mín O₂')],[20.9,'both',L('air 20,9','aire 20,9')]],
     range:(mn,mx)=>{ const hi=Math.max(22,Math.ceil(mx+0.5)); let lo=Math.max(0,Math.floor(mn-1)); if(hi-lo<4) lo=hi-4; const sp=hi-lo; return [lo,hi,sp>12?5:sp>6?2:1]; }}); }
 function tempSVG(ch, print){
   const C=chartInk(print); const rs=releves(ch.id); const D=ch.duree; const SU=seuilsOf(ch);
-  const P={in:[],ext:[]}; rs.forEach(r=>{ const t=r.jour-1+hourOf(r)/24; if(r.tInt!=null) P.in.push({t,v:r.tInt,r}); if(r.tExt!=null) P.ext.push({t,v:r.tExt,r}); });
+  const tw=S.courbe||'both'; const P={in:[],ext:[]}; rs.forEach(r=>{ const t=r.jour-1+hourOf(r)/24; if(r.tInt!=null&&tw!=='ext') P.in.push({t,v:r.tInt,r}); if(r.tExt!=null&&tw!=='in') P.ext.push({t,v:r.tExt,r}); });
   const all=P.in.concat(P.ext).map(p=>p.v).concat([SU.inMin,SU.inMax].filter(v=>v!=null)); if(!P.in.length && !P.ext.length) return '';
   const W=640,H=260,ml=34,mr=58,mt=22,mb=30,pw=W-ml-mr,ph=H-mt-mb;
   let lo=Math.floor((Math.min(...all)-2)/5)*5, hi=Math.ceil((Math.max(...all)+2)/5)*5; if(hi-lo<10) hi=lo+10;
@@ -2020,8 +2069,8 @@ function registreHTML(ch){
     </dl></section>
     ${comboSVG(ch,true)?`<section class="fig"><h3>${esc(L("Vue d'ensemble : température, humidité, oxygène (moyennes par jour)","Resumen: temperatura, humedad, oxígeno (promedios por día)"))}</h3>${comboSVG(ch,true)}</section>`:''}
     ${releves(ch.id).length?`<section class="fig"><h3>${esc(L('Courbe des températures','Curva de temperaturas'))}</h3>${tempSVG(ch,true)}</section>`:''}
-    ${humSVG(ch,true)?`<section class="fig"><h3>${esc(L("Courbe de l'humidité relative",'Curva de la humedad relativa'))}</h3>${humSVG(ch,true)}</section>`:''}
-    ${o2SVG(ch,true)?`<section class="fig"><h3>${esc(L("Courbe de l'oxygène (O₂)",'Curva del oxígeno (O₂)'))}</h3>${o2SVG(ch,true)}</section>`:''}
+    ${humSVG(ch,true,S.hv)?`<section class="fig"><h3>${esc(L("Courbe de l'humidité relative",'Curva de la humedad relativa'))}</h3>${humSVG(ch,true,S.hv)}</section>`:''}
+    ${o2SVG(ch,true,S.ov)?`<section class="fig"><h3>${esc(L("Courbe de l'oxygène (O₂)",'Curva del oxígeno (O₂)'))}</h3>${o2SVG(ch,true,S.ov)}</section>`:''}
     ${lots.length?`<section><h3>${esc(L('1. Lots','1. Lotes'))}</h3>${lots.some(l=>bilanRate(l.b)!=null)?`<div class="fig" style="margin-bottom:10px"><b class="small">${esc(L('Réussite par lot (%)','Éxito por lote (%)'))}</b>${histoSVG(ch,true)}</div>`:''}<div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Plants','Plantas'))}</th><th>Palox</th><th>${esc(L('Triés','Revisadas'))}</th><th>${esc(L('Bons','Buenas'))}</th><th>${esc(L('Réussite','Éxito'))}</th><th>${esc(L('Cause rebuts','Causa descartes'))}</th></tr></thead><tbody>${lots.map(l=>{ const c=(ch.lots||[]).find(x=>String(x.lot)===l.lot)||{}; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete)}</td><td>${esc(l.pg)}</td><td>${l.qte!=null?esc(fmtN(l.qte)):''}</td><td>${c.palox!=null?esc(fmtN(c.palox)):''}</td><td>${l.b&&l.b.tries>0?l.b.tries:''}</td><td>${l.b&&l.b.tries>0?l.b.bons:''}</td><td>${l.b?pct(bilanRate(l.b)):''}</td><td>${l.b&&l.b.cause?esc(T(l.b.cause)):''}</td></tr>`; }).join('')}</tbody></table></div></section>`:''}
     <section><h3>${esc(L('2. Conditions jour par jour','2. Condiciones día por día'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° pièce (°C)','T° sala (°C)'))}</th><th>${esc(L('T° palox min–max (°C)','T° palox mín–máx (°C)'))}</th><th>${esc(L('Moy. (°C)','Prom. (°C)'))}</th><th>${esc(L('HR pièce (%)','HR sala (%)'))}</th><th>${esc(L('HR palox (%)','HR palox (%)'))}</th><th>${esc(L('O₂ min. (%)','O₂ mín. (%)'))}</th><th>${esc(L('Mesures','Mediciones'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${ds.map(d=>{ const a=dayTempAlerts(ch,d).concat(...obsByDay(d.j).map(alertsOf)); return `<tr><td>J${d.j}</td><td>${esc(dayShort(ch,d.j))}</td><td>${rng(d.extMin,d.extMax)}</td><td${d.cold||d.hot?' class="al"':''}>${rng(d.inMin,d.inMax)}</td><td>${d.inMean!=null?fmtN(r1(d.inMean)):'—'}</td><td>${rng(d.humExtMin,d.humExtMax)}</td><td>${rng(d.humInMin,d.humInMax)}</td><td${d.o2low?' class="al"':''}>${d.o2Min!=null?fmtN(d.o2Min):'—'}</td><td>${d.n?d.n+(d.nCap?' ('+esc(L('dont ','de ellas '))+d.nCap+' '+esc(L('capteur','sensor'))+')':''):'—'}</td><td class="al">${a.map(esc).join('<br>')}</td></tr>`; }).join('')}</tbody></table></div></section>
     <section><h3>${esc(L('3. Traitements phytosanitaires','3. Tratamientos fitosanitarios'))}</h3>${phytoTableHTML(ch,true)||'<p class="small">'+esc(L('Aucun traitement enregistré.','Ningún tratamiento registrado.'))+'</p>'}</section>
@@ -2131,7 +2180,7 @@ async function importFile(e, st){
 })();
 /* L'app d'origine (même adresse github.io) peut effacer nos fichiers hors ligne quand elle se met à jour :
    on vérifie au démarrage et on les remet en cache si besoin. */
-async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v2.6.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
+async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v2.7.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
 if(location.protocol!=='file:') setTimeout(ensureShell, 4000);
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').then(reg=>{

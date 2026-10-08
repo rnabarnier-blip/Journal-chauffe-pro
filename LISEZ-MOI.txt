@@ -13,7 +13,8 @@ NOUVEAUTÉS
    (palox min/max, pièce min), rappel si pas de relevé depuis X heures. Alertes à la saisie, sur la courbe (lignes rouges) et dans le suivi.
 2. Chaque relevé : température, humidité (%) et oxygène O₂ (%) dans la pièce ET dans le palox,
    avec une courbe de l'humidité, une courbe de l'oxygène, et une vue d'ensemble qui montre les trois
-   en même temps (Suivi et registre PDF).
+   en même temps (Suivi et registre PDF). Dans chaque graphique, tu choisis les courbes à afficher
+   (palox / pièce) et tu peux les superposer. Le PDF reprend les courbes choisies.
 8. Traitements phytosanitaires (Saisie → carte « Traitements ») : produit, matière active, dose + unité,
    méthode, cible, volume de bouillie. Repris dans le Suivi, l'onglet Infos, le registre PDF et l'export Excel.
 3. Import d'un enregistreur de température (Saisie → en bas) : fichier .csv ou .xlsx exporté depuis le capteur.
@@ -40,7 +41,7 @@ ESSAYER AVEC TES VRAIES NOTES
 Dans le Journal de chauffes : « Partager mes notes » → Enregistrer dans Fichiers.
 Dans Chauffes Pro : « Importer » → choisis ce fichier. Ton Journal de chauffes n'est pas modifié.
 
-METTRE À JOUR L'APP (version 2.6.0)
+METTRE À JOUR L'APP (version 2.7.0)
 Dans le dépôt Journal-chauffe-pro sur GitHub : « Add file » → « Upload files » → choisis index.html et sw.js
 (tu peux aussi remettre tous les fichiers) → « Commit changes ».
 Au prochain lancement avec internet, l'app propose « Recharger ». Tes notes ne sont pas touchées.
