@@ -221,6 +221,23 @@ details.sensor:not([open]){gap:0}
 .homebtns .ghost{min-height:50px;background:var(--surface)}
 .chauffecard .rappel{font-size:13px;color:var(--warn);font-weight:600}
 .langseg{max-width:320px}
+.mapcard{gap:10px}
+.pamap{height:min(62vh,440px);border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#1a1f1c;z-index:0}
+.mapmsg{padding:16px;font-size:14px;color:var(--muted);background:var(--sunk);border-radius:10px}
+.seg.mini button{min-height:34px;padding:4px 10px;font-size:13.5px;flex:0 0 auto}
+.maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.maplegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.maplegend i.pos{background:transparent;border:2px dashed #ff3b30}
+.leaflet-tooltip.parclabel{background:rgba(20,20,20,.62);color:#fff;border:0;box-shadow:none;font:600 12px var(--f-body);padding:2px 6px;border-radius:5px}
+.leaflet-tooltip.parclabel:before{display:none}
+.leaflet-container{font:12px var(--f-body)}
+.girow{display:grid;gap:4px;padding-bottom:6px;border-bottom:1px dashed var(--line)}
+.girow select{min-height:38px;font-size:14px}
+.geoline{font-size:14px}
+.maplinks .linkb{font-size:13.5px;min-height:36px;padding:6px 10px;text-decoration:none;display:inline-flex;align-items:center;flex:0 1 auto}
+.tdot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:1px}
+.item.flash{outline:3px solid var(--accent);outline-offset:2px}
+.geobox{border-top:1px dashed var(--line);padding-top:10px}
 .prodbtn{display:grid;gap:2px;text-align:left;border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg);border-radius:12px;padding:14px 16px;cursor:pointer;font:700 17px var(--f-body)}
 .prodbtn small{font:400 13.5px var(--f-body);color:var(--muted)}
 .prodnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -292,7 +309,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.1.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -2404,29 +2421,193 @@ const PARC_FIELDS=[{k:'nom', t:'text', fr:'Nom de la parcelle', es:'Nombre de la
   {k:'certif', t:'text', fr:'Certification', es:'Certificación', ph:'Ex. : base, certifié'},{k:'remarque', t:'area', fr:'Remarques', es:'Observaciones'}];
 const ANA_FIELDS=[{k:'date', t:'date', fr:'Date', es:'Fecha'},{k:'analyse', t:'text', fr:'Analyse / observation', es:'Análisis / observación', ph:'Ex. : ELISA GFLV, prospection flavescence'},
   {k:'resultat', t:'seg', fr:'Résultat', es:'Resultado', opts:[['Négatif','Negativo'],['Positif','Positivo'],['En attente','Pendiente']]},{k:'remarque', t:'area', fr:'Remarques', es:'Observaciones'}];
+/* ---------- Localisation des parcelles : lecture de fichiers (KML, KMZ, GeoJSON, GPX) ----------
+   Une parcelle garde sa forme dans p.geo : une liste d'objets GeoJSON « Feature » (longitude, latitude). */
+const r6 = v => Math.round(v*1e6)/1e6;
+const closeRing = r => { if(r.length && (r[0][0]!==r[r.length-1][0] || r[0][1]!==r[r.length-1][1])) r=r.concat([r[0]]); return r; };
+function geoCoordsTxt(t){ return String(t||'').trim().split(/\s+/).map(c=>c.split(',').map(Number)).filter(c=>c.length>=2&&isFinite(c[0])&&isFinite(c[1])&&Math.abs(c[1])<=90&&Math.abs(c[0])<=180).map(c=>[r6(c[0]),r6(c[1])]); }
+function geoParseKML(text){
+  const doc=xmlDoc(text); if(doc.getElementsByTagName('parsererror').length) throw new Error('xml');
+  const items=[];
+  byTag(doc,'Placemark').forEach((pm,i)=>{ const nm=byTag(pm,'name')[0]; const name=(nm&&nm.textContent||'').trim()||(L('Forme ','Forma ')+(i+1));
+    const feats=[]; const F=g=>feats.push({type:'Feature',properties:{name},geometry:g});
+    byTag(pm,'Polygon').forEach(pg=>{ const ob=byTag(pg,'outerBoundaryIs')[0]; if(!ob) return; const o=geoCoordsTxt((byTag(ob,'coordinates')[0]||{}).textContent); if(o.length<3) return;
+      const holes=byTag(pg,'innerBoundaryIs').map(ib=>geoCoordsTxt((byTag(ib,'coordinates')[0]||{}).textContent)).filter(h=>h.length>=3).map(closeRing);
+      F({type:'Polygon',coordinates:[closeRing(o),...holes]}); });
+    byTag(pm,'LineString').forEach(ls=>{ const c=geoCoordsTxt((byTag(ls,'coordinates')[0]||{}).textContent); if(c.length>1) F({type:'LineString',coordinates:c}); });
+    byTag(pm,'Point').forEach(pt=>{ const c=geoCoordsTxt((byTag(pt,'coordinates')[0]||{}).textContent); if(c.length) F({type:'Point',coordinates:c[0]}); });
+    if(feats.length) items.push({name, feats}); });
+  return items;
+}
+function geoParseGPX(text){
+  const doc=xmlDoc(text); if(doc.getElementsByTagName('parsererror').length) throw new Error('xml');
+  const items=[]; const nameOf=(el,def)=>{ const n=[...el.children].find(c=>c.localName==='name'); return (n&&n.textContent.trim())||def; };
+  const pt=e=>[r6(Number(e.getAttribute('lon'))),r6(Number(e.getAttribute('lat')))];
+  const lineOrPoly=(pts,name)=>{ pts=pts.filter(p=>isFinite(p[0])&&isFinite(p[1])); if(pts.length<2) return;
+    const a=pts[0], b=pts[pts.length-1]; const closed=pts.length>=4&&Math.abs(a[0]-b[0])<2e-5&&Math.abs(a[1]-b[1])<2e-5;
+    items.push({name, feats:[{type:'Feature',properties:{name},geometry:closed?{type:'Polygon',coordinates:[closeRing(pts)]}:{type:'LineString',coordinates:pts}}]}); };
+  byTag(doc,'trk').forEach((t,i)=>lineOrPoly(byTag(t,'trkpt').map(pt), nameOf(t,L('Trace ','Traza ')+(i+1))));
+  byTag(doc,'rte').forEach((t,i)=>lineOrPoly(byTag(t,'rtept').map(pt), nameOf(t,L('Itinéraire ','Ruta ')+(i+1))));
+  byTag(doc,'wpt').forEach((w,i)=>{ const c=pt(w); if(isFinite(c[0])&&isFinite(c[1])){ const name=nameOf(w,L('Point ','Punto ')+(i+1)); items.push({name, feats:[{type:'Feature',properties:{name},geometry:{type:'Point',coordinates:c}}]}); } });
+  return items;
+}
+function geoParseJSON(text){
+  const j=JSON.parse(text); const feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:j.type&&j.coordinates?[{type:'Feature',properties:{},geometry:j}]:[];
+  const nameKeys=['name','nom','Name','NOM','Nom','nombre','NOMBRE','label','id','ID'];
+  return feats.filter(f=>f&&f.geometry&&f.geometry.coordinates).map((f,i)=>{ const pr=f.properties||{}; const k=nameKeys.find(k=>pr[k]!=null&&String(pr[k]).trim());
+    const name=k?String(pr[k]).trim():(L('Forme ','Forma ')+(i+1));
+    const rnd=c=>typeof c[0]==='number'?[r6(c[0]),r6(c[1])]:c.map(rnd);
+    return {name, feats:[{type:'Feature',properties:{name},geometry:{type:f.geometry.type,coordinates:rnd(f.geometry.coordinates)}}]}; });
+}
+async function geoReadFile(f){
+  const n=f.name.toLowerCase();
+  if(/\.kmz$/.test(n)){ if(typeof DecompressionStream==='undefined') throw new Error('old'); const z=await unzipEntries(await f.arrayBuffer()); const k=Object.keys(z).filter(x=>/\.kml$/i.test(x)).sort((a,b)=>(/doc\.kml$/i.test(b)?1:0)-(/doc\.kml$/i.test(a)?1:0))[0]; if(!k) throw new Error('nokml'); return geoParseKML(await z.__read(k)); }
+  if(/\.zip$/.test(n)||/\.shp$/.test(n)) throw new Error('shp');
+  const text=await f.text();
+  if(/\.gpx$/.test(n)||/<gpx[\s>]/i.test(text.slice(0,600))) return geoParseGPX(text);
+  if(/\.kml$/.test(n)||/<kml[\s>]/i.test(text.slice(0,600))) return geoParseKML(text);
+  return geoParseJSON(text);
+}
+const GEO_ACCEPT='.kml,.kmz,.geojson,.json,.gpx,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/geo+json,application/json,application/gpx+xml';
+function geoErr(e){ const m=e&&e.message; return m==='shp'?L("Les fichiers Shapefile (.shp / .zip) ne sont pas lus. Ouvre-les dans geojson.io ou Google Earth et exporte-les en KML ou GeoJSON.","Los archivos Shapefile (.shp / .zip) no se leen. Ábrelos en geojson.io o Google Earth y expórtalos en KML o GeoJSON.")
+  : m==='old'?L('Ce téléphone est trop ancien pour lire les .kmz : exporte en .kml.','Este teléfono es demasiado antiguo para leer .kmz: exporta en .kml.')
+  : L('Fichier illisible. Formats acceptés : KML, KMZ (Google Earth), GeoJSON, GPX.','Archivo ilegible. Formatos aceptados: KML, KMZ (Google Earth), GeoJSON, GPX.'); }
+
+/* Surface (m²) des polygones, sur la sphère terrestre. */
+function ringArea(r){ const R=6378137, rad=Math.PI/180; let a=0; for(let i=0;i<r.length-1;i++){ const [x1,y1]=r[i],[x2,y2]=r[i+1]; a+=(x2-x1)*rad*(2+Math.sin(y1*rad)+Math.sin(y2*rad)); } return Math.abs(a*R*R/2); }
+function geoArea(feats){ let a=0; (feats||[]).forEach(f=>{ const g=f.geometry; if(!g) return; const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[]; polys.forEach(p=>{ if(!p[0]) return; a+=ringArea(p[0]); p.slice(1).forEach(h=>a-=ringArea(h)); }); }); return a; }
+function geoBBox(feats){ let x0=180,y0=90,x1=-180,y1=-90, any=false; const walk=c=>{ if(typeof c[0]==='number'){ any=true; x0=Math.min(x0,c[0]); x1=Math.max(x1,c[0]); y0=Math.min(y0,c[1]); y1=Math.max(y1,c[1]); } else c.forEach(walk); }; (feats||[]).forEach(f=>f.geometry&&walk(f.geometry.coordinates)); return any?[x0,y0,x1,y1]:null; }
+function geoCenter(feats){ const b=geoBBox(feats); return b?[(b[1]+b[3])/2,(b[0]+b[2])/2]:null; }
+function geoKind(feats){ const t=(feats||[]).map(f=>f.geometry&&f.geometry.type); if(t.some(x=>/Polygon/.test(x))) return 'poly'; if(t.some(x=>/LineString/.test(x))) return 'line'; return t.length?'point':''; }
+function geoLabel(feats){ if(!feats||!feats.length) return L('Pas de localisation','Sin ubicación'); const k=geoKind(feats), a=geoArea(feats);
+  return k==='poly'?L('Contour','Contorno')+' · '+fmtN(Math.round(a/100)/100)+' ha':k==='line'?L('Tracé','Trazado'):L('Point GPS','Punto GPS'); }
+
+/* Export KML (Google Earth) et GeoJSON. */
+function geoExport(ps, kind){
+  const withGeo=ps.filter(p=>p.geo&&p.geo.length);
+  if(kind==='geojson'){ const fc={type:'FeatureCollection',features:withGeo.flatMap(p=>p.geo.map(f=>({type:'Feature',properties:{name:p.nom,type:p.ptype,variete:p.variete||'',clone:p.clone||'',surface_ha:p.surface??null},geometry:f.geometry})))};
+    return new File([JSON.stringify(fc)],'parcelles.geojson',{type:'application/geo+json'}); }
+  const x=s=>esc(s); const co=c=>c.map(p=>p[0]+','+p[1]+',0').join(' ');
+  const g=geo=>{ if(geo.type==='Point') return `<Point><coordinates>${geo.coordinates[0]},${geo.coordinates[1]},0</coordinates></Point>`;
+    if(geo.type==='LineString') return `<LineString><coordinates>${co(geo.coordinates)}</coordinates></LineString>`;
+    const poly=p=>`<Polygon><outerBoundaryIs><LinearRing><coordinates>${co(p[0])}</coordinates></LinearRing></outerBoundaryIs>${p.slice(1).map(h=>`<innerBoundaryIs><LinearRing><coordinates>${co(h)}</coordinates></LinearRing></innerBoundaryIs>`).join('')}</Polygon>`;
+    if(geo.type==='Polygon') return poly(geo.coordinates); if(geo.type==='MultiPolygon') return `<MultiGeometry>${geo.coordinates.map(poly).join('')}</MultiGeometry>`; return ''; };
+  const kml=`<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${x(S.etab.nom||'Parcelles')}</name>`+
+    `<Style id="pg"><LineStyle><color>ff3aa4e0</color><width>2</width></LineStyle><PolyStyle><color>553aa4e0</color></PolyStyle></Style><Style id="greffon"><LineStyle><color>ff7a54c2</color><width>2</width></LineStyle><PolyStyle><color>557a54c2</color></PolyStyle></Style><Style id="pep"><LineStyle><color>ff7abf4f</color><width>2</width></LineStyle><PolyStyle><color>557abf4f</color></PolyStyle></Style>`+
+    withGeo.map(p=>`<Placemark><name>${x(p.nom)}</name><description>${x([p.variete,p.clone&&('clone '+p.clone),p.annee,p.surface!=null&&(fmtN(p.surface)+' ha')].filter(Boolean).join(' · '))}</description><styleUrl>#${p.ptype||'pg'}</styleUrl>${p.geo.length>1?'<MultiGeometry>'+p.geo.map(f=>g(f.geometry)).join('')+'</MultiGeometry>':g(p.geo[0].geometry)}</Placemark>`).join('')+`</Document></kml>`;
+  return new File([kml],'parcelles.kml',{type:'application/vnd.google-earth.kml+xml'});
+}
+
+/* ---------- Carte satellite (Leaflet, chargé seulement à l'ouverture des parcelles) ---------- */
+let leafletP=null, paMap=null, paLayers={}, paBase=null;
+function loadLeaflet(){ if(window.L&&window.L.map) return Promise.resolve(window.L); if(leafletP) return leafletP;
+  leafletP=new Promise((ok,ko)=>{ if(!document.getElementById('lf-css')){ const css=document.createElement('link'); css.id='lf-css'; css.rel='stylesheet'; css.href='leaflet.css'; document.head.appendChild(css); }
+    const s=document.createElement('script'); s.src='leaflet.js'; s.onload=()=>window.L&&window.L.map?ok(window.L):ko(new Error('lf')); s.onerror=()=>{ leafletP=null; ko(new Error('lf')); }; document.head.appendChild(s); });
+  return leafletP; }
+const PARC_COL={pg:'#f0b43c', greffon:'#e46a9a', pep:'#5fd38a'};
+const parcPositive = p => pAll('p_ana').some(a=>a.parcId===p.id&&a.resultat==='Positif');
+async function drawParcMap(ps){
+  const box=$('pa-map'); if(!box) return;
+  let Lf; try{ Lf=await loadLeaflet(); }catch(e){ box.innerHTML=`<div class="mapmsg">${esc(L("La carte n'a pas pu se charger. Elle a besoin d'internet (au moins la première fois).","El mapa no se pudo cargar. Necesita internet (al menos la primera vez)."))}</div>`; return; }
+  if(!document.body.contains(box)) return;
+  if(paMap){ try{ paMap.remove(); }catch(e){} paMap=null; } paLayers={};
+  const map=Lf.map(box,{zoomControl:true, attributionControl:true, tap:true}); map.attributionControl.setPrefix('Leaflet');
+  const layers={
+    sat:Lf.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:18, maxZoom:20, attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'}),
+    plan:Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19, maxZoom:20, attribution:'© OpenStreetMap'})};
+  paBase=S.mapBase==='plan'?'plan':'sat'; layers[paBase].addTo(map);
+  document.querySelectorAll('#pa-base button').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; if(v===paBase) return; map.removeLayer(layers[paBase]); layers[v].addTo(map); paBase=v; S.mapBase=v; try{ localStorage.setItem(LS+'mapBase',v); }catch(e){} document.querySelectorAll('#pa-base button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+  const group=Lf.featureGroup().addTo(map);
+  ps.forEach(p=>{ if(!p.geo||!p.geo.length) return; const c=PARC_COL[p.ptype]||'#ffffff', pos=parcPositive(p);
+    const lay=Lf.geoJSON({type:'FeatureCollection',features:p.geo},{style:{color:pos?'#ff3b30':c, weight:pos?3.5:2.5, dashArray:pos?'6 5':null, fillColor:c, fillOpacity:.22},
+      pointToLayer:(f,ll)=>Lf.circleMarker(ll,{radius:9,color:'#ffffff',weight:2.5,fillColor:c,fillOpacity:1}),
+      onEachFeature:(f,l)=>{ const pt=f.geometry&&f.geometry.type==='Point'; l.bindTooltip(esc(p.nom),{permanent:true, direction:pt?'top':'center', offset:pt?[0,-10]:[0,0], className:'parclabel'}); }});
+    lay.on('click',()=>{ const el=document.getElementById('parc-'+p.id); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1400); } });
+    lay.addTo(group); paLayers[p.id]=lay; });
+  if(group.getLayers().length) map.fitBounds(group.getBounds().pad(0.2),{maxZoom:17});
+  paMap=map; setTimeout(()=>map.invalidateSize(),60);
+}
+function zoomParc(id){ const lay=paLayers[id]; if(!paMap||!lay) return; $('pa-mapcard').scrollIntoView({behavior:'smooth',block:'start'}); paMap.fitBounds(lay.getBounds().pad(0.4),{maxZoom:18}); }
+const mapsLinks = feats => { const c=geoCenter(feats); if(!c) return ''; const ll=c[0].toFixed(6)+','+c[1].toFixed(6);
+  return `<a class="ghost linkb" href="https://maps.apple.com/?daddr=${ll}" target="_blank" rel="noopener">${esc(L('Itinéraire (Plans)','Ruta (Mapas)'))}</a><a class="ghost linkb" href="https://www.google.com/maps/dir/?api=1&destination=${ll}" target="_blank" rel="noopener">Google Maps</a>`; };
+
+/* ---------- Écran Parcelles ---------- */
 function renderParc(){
-  const ps=pAll('p_parc'); const ed=S.parcEdit;
+  const ps=pAll('p_parc'); const ed=S.parcEdit; const hasGeo=ps.some(p=>p.geo&&p.geo.length);
+  try{ if(!S.mapBase) S.mapBase=localStorage.getItem(LS+'mapBase')||'sat'; }catch(e){}
   app.innerHTML=`<header class="top"><div class="title-row"><div class="left"><button class="back" id="pa-back" type="button" aria-label="Retour">‹</button><h1>${esc(L('Parcelles','Parcelas'))}</h1></div></div></header>
   <section class="panel">
-    <p class="note">${esc(L('Vignes mères (porte-greffes et greffons) et parcelles de pépinière, avec leur suivi sanitaire. Elles se choisissent ensuite dans les étapes des lots.','Plantas madre (portainjertos y púas) y parcelas de vivero, con su seguimiento sanitario. Luego se eligen en las etapas de los lotes.'))}</p>
+    <p class="note">${esc(L('Vignes mères (porte-greffes et greffons) et parcelles de pépinière, avec leur localisation et leur suivi sanitaire. Elles se choisissent ensuite dans les étapes des lots.','Plantas madre (portainjertos y púas) y parcelas de vivero, con su ubicación y seguimiento sanitario. Luego se eligen en las etapas de los lotes.'))}</p>
+    <div class="card mapcard" id="pa-mapcard">
+      <div class="hhead"><h3>${esc(L('Carte des parcelles','Mapa de las parcelas'))}</h3>${hasGeo?`<div class="seg mini" id="pa-base"><button type="button" data-v="sat" aria-pressed="${S.mapBase!=='plan'}">${esc(L('Satellite','Satélite'))}</button><button type="button" data-v="plan" aria-pressed="${S.mapBase==='plan'}">${esc(L('Plan','Mapa'))}</button></div>`:''}</div>
+      ${hasGeo?`<div id="pa-map" class="pamap"></div><div class="maplegend">${PARC_TYPES.map(t=>`<span><i style="background:${PARC_COL[t[0]]}"></i>${esc(L(t[1],t[2]))}</span>`).join('')}<span><i class="pos"></i>${esc(L('analyse positive','análisis positivo'))}</span></div>`
+        :`<p class="note">${esc(L("Importe un fichier de tes parcelles (KML ou KMZ de Google Earth, GeoJSON, GPX) ou ajoute un point GPS depuis la fiche d'une parcelle : elles apparaîtront ici sur une vue satellite.","Importa un archivo de tus parcelas (KML o KMZ de Google Earth, GeoJSON, GPX) o agrega un punto GPS desde la ficha de una parcela: aparecerán aquí en una vista satelital."))}</p>`}
+      <div class="row"><label class="ghost filebtn" for="pa-gfile">📍 ${esc(L('Importer un fichier de localisation','Importar un archivo de ubicación'))}</label><input class="vh" id="pa-gfile" type="file" accept="${GEO_ACCEPT}">
+        ${hasGeo?`<button class="ghost" type="button" id="pa-kml">${esc(L('Exporter KML','Exportar KML'))}</button><button class="ghost" type="button" id="pa-gj">${esc(L('Exporter GeoJSON','Exportar GeoJSON'))}</button>`:''}</div>
+      <div id="pa-gimp"></div><div class="status" id="pa-gst"></div>
+    </div>
     ${ed?'':`<button class="primary" type="button" id="pa-new">${esc(L('+ Nouvelle parcelle','+ Nueva parcela'))}</button>`}
     <div id="pa-form"></div><div class="list" id="pa-list"></div></section>`;
-  $('pa-back').onclick=()=>{ S.parcEdit=null; S.anaEdit=null; go('prod'); };
+  $('pa-back').onclick=()=>{ S.parcEdit=null; S.anaEdit=null; if(paMap){ try{ paMap.remove(); }catch(e){} paMap=null; } go('prod'); };
   if($('pa-new')) $('pa-new').onclick=()=>{ S.parcEdit={id:null}; renderParc(); };
-  if(ed){ const p=ed.id?ps.find(x=>x.id===ed.id)||{}:{ptype:'pg'}; const box=$('pa-form');
+  if($('pa-kml')) $('pa-kml').onclick=()=>shareFile(geoExport(ps,'kml'),$('pa-gst'),L('Fichier KML prêt (s\'ouvre dans Google Earth).','Archivo KML listo (se abre en Google Earth).'));
+  if($('pa-gj')) $('pa-gj').onclick=()=>shareFile(geoExport(ps,'geojson'),$('pa-gst'),L('Fichier GeoJSON prêt.','Archivo GeoJSON listo.'));
+  // Import d'un fichier : une forme = une parcelle (nouvelle, ou rattachée à une parcelle existante du même nom).
+  $('pa-gfile').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const st=$('pa-gst'); st.textContent=L('Lecture du fichier…','Leyendo el archivo…'); st.className='status';
+    let items; try{ items=await geoReadFile(f); }catch(err){ st.textContent=geoErr(err); st.className='status err'; return; }
+    if(!items.length){ st.textContent=L('Aucune forme trouvée dans ce fichier.','Ninguna forma encontrada en este archivo.'); st.className='status err'; return; }
+    st.textContent=''; const box=$('pa-gimp'); const byName={}; ps.forEach(p=>byName[p.nom.trim().toLowerCase()]=p.id);
+    box.innerHTML=`<div class="card" style="gap:10px;padding:12px"><b>${esc(plural(items.length,'forme trouvée','formes trouvées','forma encontrada','formas encontradas'))}</b>
+      <div class="field"><span class="lab">${esc(L('Type des nouvelles parcelles','Tipo de las nuevas parcelas'))}</span><div class="seg" id="gi-type" data-v="pep">${PARC_TYPES.map(t=>`<button type="button" data-v="${t[0]}" aria-pressed="${t[0]==='pep'}">${esc(L(t[1],t[2]))}</button>`).join('')}</div></div>
+      <div class="xlist">${items.map((it,i)=>{ const m=byName[it.name.trim().toLowerCase()]; return `<div class="girow"><label class="xrow"><input type="checkbox" data-i="${i}" checked><span>${esc(it.name)} <span class="hint">· ${esc(geoLabel(it.feats))}</span></span></label><select data-to="${i}" aria-label="${esc(L('Destination','Destino'))}"><option value="">${esc(L('→ Nouvelle parcelle','→ Nueva parcela'))}</option>${ps.map(p=>`<option value="${esc(p.id)}"${p.id===m?' selected':''}>${esc(L('→ Remplacer la forme de : ','→ Reemplazar la forma de: ')+p.nom)}</option>`).join('')}</select></div>`; }).join('')}</div>
+      <div class="row"><button class="primary" type="button" id="gi-ok">${esc(L('Ajouter à mes parcelles','Agregar a mis parcelas'))}</button><button class="ghost" type="button" id="gi-x">${esc(L('Annuler','Cancelar'))}</button></div></div>`;
+    pBindSegs([{k:'type',t:'seg'}],'gi-');
+    $('gi-x').onclick=()=>{ box.innerHTML=''; };
+    $('gi-ok').onclick=async()=>{ const recs=[]; let nNew=0, nUpd=0;
+      box.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(!cb.checked) return; const i=Number(cb.dataset.i), it=items[i], to=box.querySelector(`[data-to="${i}"]`).value;
+        const area=geoArea(it.feats), sur=area>0?Math.round(area/100)/100:null;
+        if(to){ const p=Object.assign({},ps.find(x=>x.id===to)); p.geo=it.feats; if(p.surface==null&&sur) p.surface=sur; recs.push(p); nUpd++; }
+        else { recs.push(pNew('p_parc',{ptype:$('gi-type').dataset.v||'pep', nom:it.name, geo:it.feats, surface:sur})); nNew++; } });
+      if(!recs.length){ $('pa-gst').textContent=L('Coche au moins une forme.','Marca al menos una forma.'); $('pa-gst').className='status err'; return; }
+      await saveEntries(recs); toast([nNew?plural(nNew,'parcelle créée','parcelles créées','parcela creada','parcelas creadas'):null, nUpd?plural(nUpd,'parcelle localisée','parcelles localisées','parcela ubicada','parcelas ubicadas'):null].filter(Boolean).join(' · ')+'.'); renderParc(); };
+  };
+  if(ed){ const p=ed.id?ps.find(x=>x.id===ed.id)||{}:{ptype:'pg'}; const box=$('pa-form'); let geo=ed.geo!==undefined?ed.geo:(p.geo||null);
     box.innerHTML=`<form class="card" id="pa-f" autocomplete="off"><div class="field"><span class="lab">${esc(L('Type','Tipo'))}</span><div class="seg" id="pa-type" data-v="${esc(p.ptype||'pg')}">${PARC_TYPES.map(t=>`<button type="button" data-v="${t[0]}" aria-pressed="${(p.ptype||'pg')===t[0]}">${esc(L(t[1],t[2]))}</button>`).join('')}</div></div>
-      ${PARC_FIELDS.map(f=>pFieldHTML(f,p[f.k],'pa-')).join('')}<div class="row"><button class="primary" type="submit">${esc(L('Enregistrer','Guardar'))}</button><button class="ghost" type="button" id="pa-x">${esc(L('Annuler','Cancelar'))}</button></div>${p.id?`<button class="ghost danger" type="button" id="pa-del">${esc(L('Supprimer la parcelle','Eliminar la parcela'))}</button>`:''}<div class="status" id="pa-st"></div></form>`;
+      ${PARC_FIELDS.map(f=>pFieldHTML(f,p[f.k],'pa-')).join('')}
+      <div class="field geobox"><span class="lab">${esc(L('Localisation','Ubicación'))}</span><div class="sumbox" id="pf-geo"></div>
+        <div class="row"><label class="ghost filebtn" for="pf-gfile">${esc(L('Importer un fichier','Importar un archivo'))}</label><input class="vh" id="pf-gfile" type="file" accept="${GEO_ACCEPT}"><button class="ghost" type="button" id="pf-gps">${esc(L('Ma position GPS','Mi posición GPS'))}</button><button class="ghost danger" type="button" id="pf-gdel">${esc(L('Retirer','Quitar'))}</button></div>
+        <div id="pf-gpick"></div><span class="ex">${esc(L("Contour de la parcelle depuis Google Earth (KML/KMZ), un GeoJSON ou un GPX. « Ma position GPS » place un point là où tu te trouves.","Contorno de la parcela desde Google Earth (KML/KMZ), un GeoJSON o un GPX. « Mi posición GPS » coloca un punto donde estás."))}</span></div>
+      <div class="row"><button class="primary" type="submit">${esc(L('Enregistrer','Guardar'))}</button><button class="ghost" type="button" id="pa-x">${esc(L('Annuler','Cancelar'))}</button></div>${p.id?`<button class="ghost danger" type="button" id="pa-del">${esc(L('Supprimer la parcelle','Eliminar la parcela'))}</button>`:''}<div class="status" id="pa-st"></div></form>`;
     pBindSegs([{k:'type',t:'seg'}],'pa-');
+    const showGeo=()=>{ $('pf-geo').textContent=geoLabel(geo); $('pf-gdel').hidden=!(geo&&geo.length); };
+    const setGeo=feats=>{ geo=feats; const a=geoArea(feats); if(a>0 && !$('pa-surface').value.trim()) $('pa-surface').value=fmtN(Math.round(a/100)/100).replace(/\s/g,''); showGeo(); $('pf-gpick').innerHTML=''; };
+    showGeo();
+    $('pf-gdel').onclick=()=>{ geo=null; showGeo(); };
+    $('pf-gfile').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const st=$('pa-st');
+      let items; try{ items=await geoReadFile(f); }catch(err){ st.textContent=geoErr(err); st.className='status err'; return; }
+      if(!items.length){ st.textContent=L('Aucune forme trouvée dans ce fichier.','Ninguna forma encontrada en este archivo.'); st.className='status err'; return; }
+      st.textContent='';
+      if(items.length===1) return setGeo(items[0].feats);
+      const nm=($('pa-nom').value||'').trim().toLowerCase(); const pick=$('pf-gpick');
+      pick.innerHTML=`<div class="field"><label for="pf-gsel">${esc(L('Quelle forme pour cette parcelle ?','¿Qué forma para esta parcela?'))}</label><select id="pf-gsel">${items.map((it,i)=>`<option value="${i}"${it.name.trim().toLowerCase()===nm?' selected':''}>${esc(it.name+' · '+geoLabel(it.feats))}</option>`).join('')}</select><button class="ghost" type="button" id="pf-gok">${esc(L('Utiliser cette forme','Usar esta forma'))}</button></div>`;
+      $('pf-gok').onclick=()=>setGeo(items[Number($('pf-gsel').value)].feats); };
+    $('pf-gps').onclick=()=>{ const st=$('pa-st'); if(!navigator.geolocation){ st.textContent=L('Localisation indisponible sur cet appareil.','Ubicación no disponible en este dispositivo.'); st.className='status err'; return; }
+      st.textContent=L('Recherche de ta position…','Buscando tu posición…'); st.className='status';
+      navigator.geolocation.getCurrentPosition(pos=>{ setGeo([{type:'Feature',properties:{name:$('pa-nom').value||''},geometry:{type:'Point',coordinates:[r6(pos.coords.longitude),r6(pos.coords.latitude)]}}]); st.textContent=L('Position ajoutée (précision ±','Posición agregada (precisión ±')+Math.round(pos.coords.accuracy)+' m).'; st.className='status ok'; },
+        err=>{ st.textContent=err&&err.code===1?L("Accès à la position refusé. Autorise-le dans Réglages → Confidentialité → Service de localisation → Safari.","Acceso a la ubicación denegado. Autorízalo en Ajustes → Privacidad → Localización → Safari."):L('Position introuvable. Réessaie dehors, avec le GPS activé.','Posición no encontrada. Reintenta afuera, con el GPS activado.'); st.className='status err'; },{enableHighAccuracy:true, timeout:20000, maximumAge:0}); };
     $('pa-x').onclick=()=>{ S.parcEdit=null; renderParc(); };
     if($('pa-del')){ let c=false; $('pa-del').onclick=async()=>{ if(!c){ c=true; $('pa-del').textContent=L('Toucher encore pour supprimer','Tocar otra vez para eliminar'); return; } await removeEntry(p); S.parcEdit=null; renderParc(); }; }
     $('pa-f').onsubmit=async e=>{ e.preventDefault(); const o=pRead(PARC_FIELDS,'pa-'); if(o.err||!o.nom){ $('pa-st').textContent=o.err||L('Donne un nom à la parcelle.','Ponle un nombre a la parcela.'); $('pa-st').className='status err'; return; }
-      const rec=Object.assign({}, p.id?p:pNew('p_parc'), o, {ptype:$('pa-type').dataset.v||'pg'}); delete rec.supprime; await saveEntry(rec); S.parcEdit=null; toast(L('Parcelle enregistrée.','Parcela guardada.')); renderParc(); };
+      const rec=Object.assign({}, p.id?p:pNew('p_parc'), o, {ptype:$('pa-type').dataset.v||'pg', geo:geo&&geo.length?geo:null}); delete rec.supprime; await saveEntry(rec); S.parcEdit=null; toast(L('Parcelle enregistrée.','Parcela guardada.')); renderParc(); };
   }
-  const el=$('pa-list'); if(!ps.length){ el.innerHTML=`<div class="item empty">${esc(L('Aucune parcelle pour l\'instant.','Ninguna parcela por ahora.'))}</div>`; return; }
-  PARC_TYPES.forEach(t=>{ const list=ps.filter(p=>p.ptype===t[0]); if(!list.length) return; const h=document.createElement('h2'); h.textContent=L(t[1],t[2]); el.appendChild(h);
+  const el=$('pa-list');
+  if(!ps.length){ el.innerHTML=`<div class="item empty">${esc(L('Aucune parcelle pour l\'instant.','Ninguna parcela por ahora.'))}</div>`; }
+  PARC_TYPES.forEach(t=>{ const list=ps.filter(p=>p.ptype===t[0]); if(!list.length) return; const h=document.createElement('h2'); h.innerHTML=`<i class="tdot" style="background:${PARC_COL[t[0]]}"></i>${esc(L(t[1],t[2]))}`; el.appendChild(h);
     list.forEach(p=>{ const anas=pAll('p_ana').filter(a=>a.parcId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const pos=anas.some(a=>a.resultat==='Positif');
-      const d=document.createElement('div'); d.className='item';
+      const d=document.createElement('div'); d.className='item'; d.id='parc-'+p.id; const g=p.geo&&p.geo.length;
       d.innerHTML=`<div class="hhead"><span class="d">${esc(p.nom)}</span>${pos?`<span class="chip al">${esc(L('analyse positive','análisis positivo'))}</span>`:''}</div><div class="rem">${esc(pSummary(PARC_FIELDS.filter(f=>f.k!=='nom'),p).join(' · '))}</div>
+        <div class="geoline">📍 ${esc(geoLabel(p.geo))}${g?` <button class="linkbtn" type="button" data-zoom="1">${esc(L('Voir sur la carte','Ver en el mapa'))}</button>`:''}</div>
+        ${g?`<div class="row maplinks">${mapsLinks(p.geo)}</div>`:''}
         <div class="list" style="gap:4px">${anas.map(a=>`<div class="trec"><div>${esc([pdate(a.date),a.analyse,a.resultat?L(a.resultat,{'Négatif':'Negativo','Positif':'Positivo','En attente':'Pendiente'}[a.resultat]):''].filter(Boolean).join(' · '))}${a.remarque?`<div class="rem">${esc(a.remarque)}</div>`:''}</div><button class="ghost" type="button" data-ana="${esc(a.id)}">${esc(L('Modifier','Modificar'))}</button></div>`).join('')}</div>
         <div id="ana-${esc(p.id)}"></div><div class="row"><button class="ghost" type="button" data-addana="1">${esc(L('+ Analyse sanitaire','+ Análisis sanitario'))}</button><button class="ghost" type="button" data-editp="1">${esc(L('Modifier','Modificar'))}</button></div>`;
       el.appendChild(d);
@@ -2436,8 +2617,10 @@ function renderParc(){
         $('an-f').onsubmit=async e=>{ e.preventDefault(); const o=pRead(ANA_FIELDS,'an-'); const rec=Object.assign({}, a||pNew('p_ana',{parcId:p.id}), o); delete rec.supprime; await saveEntry(rec); toast(L('Analyse enregistrée.','Análisis guardado.')); renderParc(); }; };
       d.querySelector('[data-addana]').onclick=()=>openAna(null);
       d.querySelectorAll('[data-ana]').forEach(b=>b.onclick=()=>openAna(anas.find(a=>a.id===b.dataset.ana)));
-      d.querySelector('[data-editp]').onclick=()=>{ S.parcEdit={id:p.id}; renderParc(); window.scrollTo({top:0}); };
+      d.querySelector('[data-editp]').onclick=()=>{ S.parcEdit={id:p.id}; renderParc(); setTimeout(()=>$('pa-form').scrollIntoView({block:'start'}),30); };
+      const z=d.querySelector('[data-zoom]'); if(z) z.onclick=()=>zoomParc(p.id);
     }); });
+  if(hasGeo) drawParcMap(ps);
 }
 
 /* ---------- Commandes et stock ---------- */
@@ -2618,7 +2801,7 @@ async function importFile(e, st){
 })();
 /* L'app d'origine (même adresse github.io) peut effacer nos fichiers hors ligne quand elle se met à jour :
    on vérifie au démarrage et on les remet en cache si besoin. */
-async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v3.0.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
+async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v3.1.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./leaflet.js','./leaflet.css']); }catch(e){} }
 if(location.protocol!=='file:') setTimeout(ensureShell, 4000);
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').then(reg=>{
