@@ -28,6 +28,17 @@ NOUVEAUTÉS
    l'histogramme de réussite, les lots, les conditions jour par jour,
    observations, intervenants et visa. Nom de la pépinière dans Réglages.
 7. Français / Español (Réglages, ou dès l'écran de bienvenue).
+9. PRODUCTION, du bois au client (Accueil → « Production ») :
+   - lots de production par saison (variété, clone, porte-greffe, clone PG, destination) ;
+   - une fiche par étape : bois & vignes mères, greffage, mise en palox (lien vers la chauffe), sortie de chauffe
+     (calcul automatique depuis le Bilan), endurcissement, plantation, reprise, conduite, arrachage, tri, conditionnement ;
+   - heures de travail et coûts à chaque étape → coût par plant vendable ;
+   - rendement par étape (greffés → bons → plantés → repris → arrachés → vendables → vendus) ;
+   - « Créer les lots depuis une chauffe » : reprend les lots d'une chauffe en un geste ;
+   - parcelles (vignes mères, pépinière) avec analyses sanitaires ;
+   - commandes et stock disponible par variété × porte-greffe ;
+   - planifier à rebours : combien greffer pour X plants vendables, d'après tes rendements ;
+   - fiche de traçabilité du lot en PDF.
 
 MISE EN LIGNE (depuis l'iPad, comme la première fois)
 1. Décompresse le .zip dans Fichiers : un dossier « chauffes-pro » apparaît.
@@ -41,7 +52,7 @@ ESSAYER AVEC TES VRAIES NOTES
 Dans le Journal de chauffes : « Partager mes notes » → Enregistrer dans Fichiers.
 Dans Chauffes Pro : « Importer » → choisis ce fichier. Ton Journal de chauffes n'est pas modifié.
 
-METTRE À JOUR L'APP (version 2.7.0)
+METTRE À JOUR L'APP (version 3.0.0)
 Dans le dépôt Journal-chauffe-pro sur GitHub : « Add file » → « Upload files » → choisis index.html et sw.js
 (tu peux aussi remettre tous les fichiers) → « Commit changes ».
 Au prochain lancement avec internet, l'app propose « Recharger ». Tes notes ne sont pas touchées.
