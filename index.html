@@ -221,6 +221,14 @@ details.sensor:not([open]){gap:0}
 .homebtns .ghost{min-height:50px;background:var(--surface)}
 .chauffecard .rappel{font-size:13px;color:var(--warn);font-weight:600}
 .langseg{max-width:320px}
+.phrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;background:var(--sunk);border-radius:8px;padding:10px 12px;font-size:15px}
+.phrow .mono{font-size:13.5px}
+.phrow .lotact{flex-direction:column}
+.phform{display:grid;gap:12px;border-top:1px dashed var(--line);padding-top:12px}
+.chip.ph{background:var(--warn-soft);color:var(--fg)}
+#ph-open{justify-self:start}
+.relgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;align-items:end}
+.relgrid .colh{font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line);padding-bottom:3px}
 section.panel>*{min-width:0}
 #k-body{display:grid;gap:16px;min-width:0}
 #k-body>*,.paper>*,.card>*{min-width:0}
@@ -255,7 +263,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.2.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -352,7 +360,7 @@ async function saveEntries(list){ if(!list.length) return; const t=nowIso(); lis
 /* ---------- Données dérivées d'une chauffe ---------- */
 function myObs(cid, jour){ return entriesOf(cid,'obs').find(e=>e.jour===jour && isMine(e)); }
 function dayEntries(cid, jour){ return S.entrees.filter(e=>!e.supprime && e.chauffeId===cid && e.jour===jour); }
-function dayFilled(cid, jour){ return dayEntries(cid,jour).some(e=>e.type==='releve'||e.type==='photo'||(e.type==='obs'&&(OBS_KEYS.some(k=>e[k])||e.remarque))); }
+function dayFilled(cid, jour){ return dayEntries(cid,jour).some(e=>e.type==='releve'||e.type==='photo'||e.type==='phyto'||(e.type==='obs'&&(OBS_KEYS.some(k=>e[k])||e.remarque))); }
 function alertsOf(r){ return OBS_KEYS.filter(k=>r[k] && OPTS[k].alert.includes(r[k])).map(k=>OPTS[k].label+' : '+r[k]); }
 function lastDay(ch){ let n=0; for(let j=1;j<=ch.duree;j++) if(dayFilled(ch.id,j)) n=j; return n; }
 function chauffeAlerts(ch){ return entriesOf(ch.id).filter(e=>(e.type==='obs'||e.type==='lot') && alertsOf(e).length).length + dayStats(ch).filter(d=>d.alert).length; }
@@ -368,17 +376,22 @@ const seuilsOf = ch => Object.assign({inMin:null, inMax:null, saut:null, rappel:
 const hasSeuils = ch => { const s=seuilsOf(ch); return s.inMin!=null || s.inMax!=null || s.saut!=null; };
 const hourOf = r => { if(r.heure && /^\d{1,2}:\d{2}$/.test(r.heure)){ const [h,m]=r.heure.split(':').map(Number); return h+m/60; } return 12; };
 function relDate(ch, r){ const d=dayDate(ch, r.jour); if(!d) return null; const h=hourOf(r); d.setHours(Math.floor(h), Math.round((h%1)*60), 0, 0); return d; }
+/* Humidité relative : dans la pièce (hors palox) et dans le palox. Ancien champ « hum » = palox, sauf capteur placé hors palox. */
+const hIn = r => r.humInt!=null ? r.humInt : (r.hum!=null && r.pos!=='ext' ? r.hum : null);
+const hOut = r => r.humExt!=null ? r.humExt : (r.hum!=null && r.pos==='ext' ? r.hum : null);
+function humText(r){ const a=[]; if(hOut(r)!=null) a.push(L('HR pièce ','HR sala ')+fmtN(hOut(r))+' %'); if(hIn(r)!=null) a.push(L('HR palox ','HR palox ')+fmtN(hIn(r))+' %'); return a.join(' · '); }
+const rngTxt=(a,unit)=>{ a=a.filter(v=>v!=null); if(!a.length) return null; const r1=v=>fmtN(Math.round(v*10)/10); const mn=Math.min(...a), mx=Math.max(...a); return (mn===mx?r1(mn):r1(mn)+'–'+r1(mx))+unit; };
 function relOut(ch, r){ const s=seuilsOf(ch); if(r.tInt==null) return ''; if(s.inMin!=null && r.tInt<s.inMin) return 'cold'; if(s.inMax!=null && r.tInt>s.inMax) return 'hot'; return ''; }
 /* Statistiques jour par jour + alertes de température (trop froid, trop chaud, variation brusque de la moyenne d'un jour à l'autre). */
 function dayStats(ch){
   const s=seuilsOf(ch); const days=[];
-  for(let j=1;j<=ch.duree;j++) days.push({j, n:0, nCap:0, ins:[], exts:[], hums:[], cold:0, hot:0});
+  for(let j=1;j<=ch.duree;j++) days.push({j, n:0, nCap:0, ins:[], exts:[], humsIn:[], humsExt:[], cold:0, hot:0});
   releves(ch.id).forEach(r=>{ const d=days[r.jour-1]; if(!d) return; d.n++; if(r.source==='capteur') d.nCap++;
     if(r.tInt!=null){ d.ins.push(r.tInt); const o=relOut(ch,r); if(o==='cold') d.cold++; if(o==='hot') d.hot++; }
-    if(r.tExt!=null) d.exts.push(r.tExt); if(r.hum!=null) d.hums.push(r.hum); });
+    if(r.tExt!=null) d.exts.push(r.tExt); if(hIn(r)!=null) d.humsIn.push(hIn(r)); if(hOut(r)!=null) d.humsExt.push(hOut(r)); });
   const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null, mn=a=>a.length?Math.min(...a):null, mx=a=>a.length?Math.max(...a):null;
   let prev=null;
-  days.forEach(d=>{ d.inMean=mean(d.ins); d.inMin=mn(d.ins); d.inMax=mx(d.ins); d.extMean=mean(d.exts); d.extMin=mn(d.exts); d.extMax=mx(d.exts); d.humMean=mean(d.hums); d.humMin=mn(d.hums); d.humMax=mx(d.hums); d.saut=null;
+  days.forEach(d=>{ d.inMean=mean(d.ins); d.inMin=mn(d.ins); d.inMax=mx(d.ins); d.extMean=mean(d.exts); d.extMin=mn(d.exts); d.extMax=mx(d.exts); d.humInMin=mn(d.humsIn); d.humInMax=mx(d.humsIn); d.humExtMin=mn(d.humsExt); d.humExtMax=mx(d.humsExt); d.saut=null;
     if(d.inMean!=null){ if(prev && s.saut!=null && d.j-prev.j===1 && Math.abs(d.inMean-prev.inMean)>=s.saut) d.saut=d.inMean-prev.inMean; prev=d; }
     d.alert=!!(d.cold||d.hot||d.saut!=null); });
   return days;
@@ -404,10 +417,13 @@ const fmtAge = h => h<1 ? L("moins d'une heure",'menos de una hora') : h<48 ? pl
 const CAUSES=['Pas de cal',"Cal d'un seul côté",'Moisissure','Bois sec','Pas de racines','Autre'];
 const bilansOf = cid => entriesOf(cid,'bilan');
 const bilanOf = (cid, lot) => bilansOf(cid).find(b=>String(b.lot)===String(lot));
-const bilanRate = b => b && b.tries>0 && b.bons!=null ? Math.max(0,Math.min(1,b.bons/b.tries)) : null;
+/* Un bilan se saisit soit en comptant (plants triés / plants bons), soit directement en pourcentage. */
+const isPctBilan = b => !!b && b.pct!=null && !(b.tries>0);
+const bilanRate = b => !b ? null : (b.tries>0 && b.bons!=null ? Math.max(0,Math.min(1,b.bons/b.tries)) : (b.pct!=null ? Math.max(0,Math.min(1,b.pct/100)) : null));
+const bilanDetail = b => isPctBilan(b) ? L('saisi en pourcentage','ingresado en porcentaje') : plural(b.bons,'bon','bons','buena','buenas')+L(' sur ',' de ')+plural(b.tries,'trié','triés','revisada','revisadas');
 /* Réussite moyenne pondérée : par le nombre de plants du lot s'il est connu, sinon par le nombre de plants triés. */
 function aggRate(items){ let w=0, g=0, tries=0, bons=0, plants=0;
-  items.forEach(({b, qte})=>{ const r=bilanRate(b); if(r==null) return; const wt=qte>0?qte:b.tries; w+=wt; g+=r*wt; tries+=b.tries; bons+=b.bons; if(qte>0) plants+=qte; });
+  items.forEach(({b, qte})=>{ const r=bilanRate(b); if(r==null) return; const wt=qte>0?qte:(b.tries>0?b.tries:100); w+=wt; g+=r*wt; if(b.tries>0){ tries+=b.tries; bons+=b.bons||0; } if(qte>0) plants+=qte; });
   return {rate:w?g/w:null, tries, bons, plants}; }
 function lotsWithBilan(ch){
   const lots=(ch.lots||[]).map(l=>({lot:String(l.lot), variete:l.variete||'', pg:l.pg||'', qte:l.qte||null}));
@@ -728,7 +744,7 @@ const ES = {
   'Odeur anormale à la base des plants.':'Olor anormal en la base de las plantas.','Pas de gouttes sur la cire, ou couverture sèche.':'Sin gotas sobre la cera, o manta seca.',"Ruissellement ou eau qui stagne au fond d'un palox.":'Escurrimiento o agua estancada en el fondo de un palox.','Bois sec ou détrempé.':'Madera seca o empapada.','Un lot nettement en retard sur les autres pour les racines.':'Un lote claramente atrasado respecto a los demás en raíces.',"Une température qui change brusquement d'un jour à l'autre.":'Una temperatura que cambia bruscamente de un día a otro.',"Ces signes sont des signaux d'alerte, pas un diagnostic.":'Estas señales son alertas, no un diagnóstico.',
   'La soudure du greffon et du porte-greffe':'La soldadura de la púa y el portainjerto',"Explications générales sur la technique, pas un protocole : en cas de doute, c'est le responsable de la pépinière qui décide.":'Explicaciones generales sobre la técnica, no un protocolo: en caso de duda, decide el responsable del vivero.',"Ce que c'est":'Qué es',"La soudure, c'est l'union du greffon et du porte-greffe en une seule plante. Au greffage, les deux morceaux sont seulement emboîtés. Pendant la chauffe, ils doivent se relier par un tissu vivant : le":'La soldadura es la unión de la púa y el portainjerto en una sola planta. Al injertar, las dos partes solo están encajadas. Durante la calefacción, deben unirse por un tejido vivo: el','cal':'callo','Comment elle se forme':'Cómo se forma','Contact.':'Contacto.',"Les deux cambiums (la fine couche verte vivante sous l'écorce) sont en contact grâce à la coupe de greffage.":'Los dos cámbiums (la fina capa verde viva bajo la corteza) están en contacto gracias al corte de injerto.','Cal.':'Callo.',"Avec la chaleur et l'humidité, chaque partie produit un tissu blanc-crème, tendre, au niveau des coupes.":'Con el calor y la humedad, cada parte produce un tejido blanco-crema, tierno, a nivel de los cortes.','Jonction.':'Unión.','Les cals du greffon et du porte-greffe grossissent et se rejoignent.':'Los callos de la púa y del portainjerto crecen y se juntan.','Vaisseaux.':'Vasos.',"De nouveaux vaisseaux se forment à travers le cal. La sève peut alors passer d'une partie à l'autre.":'Se forman nuevos vasos a través del callo. La savia puede pasar de una parte a la otra.',"À la sortie de chauffe, la soudure n'est pas terminée : elle continue de se renforcer pendant la saison en pépinière.":'Al salir de la calefacción, la soldadura no está terminada: sigue reforzándose durante la temporada en vivero.','Ce qui la favorise ou la gêne':'Lo que la favorece o la dificulta','Chaleur :':'Calor:','accélère la formation du cal. Trop chaud, le cal devient abondant et fragile.':'acelera la formación del callo. Demasiado calor: el callo se vuelve abundante y frágil.','Humidité :':'Humedad:',"indispensable, un cal qui sèche meurt. Trop d'eau prive la base d'air et favorise les moisissures.":'indispensable, un callo que se seca muere. Demasiada agua priva de aire a la base y favorece los hongos.','Qualité de la coupe :':'Calidad del corte:','un emboîtement serré et bien aligné laisse moins de vide à combler.':'un encaje apretado y bien alineado deja menos vacío por llenar.','Réserves du bois :':'Reservas de la madera:',"le plant vit sur ses réserves tant qu'il n'a ni racines ni feuilles.":'la planta vive de sus reservas mientras no tenga raíces ni hojas.',"Comment l'observer":'Cómo observarla','Bon signe':'Buena señal','Un bourrelet blanc-crème visible tout autour de la ligne de greffe, ferme au toucher.':'Un rodete blanco-crema visible todo alrededor de la línea de injerto, firme al tacto.','À surveiller':'A vigilar','Pas encore de cal visible : normal en début de chauffe, à comparer avec les autres lots.':'Todavía sin callo visible: normal al inicio de la calefacción, comparar con los otros lotes.',"Cal d'un seul côté, cal brun ou noir, cal mou ou aqueux, ou moisissure à la greffe.":'Callo de un solo lado, callo café o negro, callo blando o acuoso, u hongos en el injerto.','Certaines pépinières testent la soudure en exerçant une légère pression sur le greffon. Ce geste peut casser une soudure fragile : ne le fais que si le responsable te le montre.':'Algunos viveros prueban la soldadura presionando levemente la púa. Ese gesto puede romper una soldadura frágil: hazlo solo si el responsable te lo muestra.',
   // Bilan / registre (valeurs enregistrées en français)
-  'Pas de cal':'Sin callo',"Cal d'un seul côté":'Callo de un solo lado','Moisissure':'Hongos','Bois sec':'Madera seca','Pas de racines':'Sin raíces','Autre':'Otra',
+  'Pas de cal':'Sin callo','Trempage':'Inmersión','Pulvérisation':'Pulverización','Arrosage':'Riego','Fumigation':'Fumigación','Traitement':'Tratamiento','Produit':'Producto','Matière active':'Ingrediente activo','Dose':'Dosis','Unité':'Unidad','Méthode':'Método','Cible':'Objetivo','Bouillie (L)':'Caldo (L)','T° pièce (°C)':'T° sala (°C)','HR pièce (%)':'HR sala (%)',"Cal d'un seul côté":'Callo de un solo lado','Moisissure':'Hongos','Bois sec':'Madera seca','Pas de racines':'Sin raíces','Autre':'Otra',
   'Relevé':'Lectura','Observation':'Observación','Contrôle lot':'Control lote','Date':'Fecha','Type':'Tipo','Heure':'Hora','T° ext. (°C)':'T° ext. (°C)','T° dans palox (°C)':'T° en palox (°C)','Source':'Fuente','Nb plants':'N° plantas','Plants triés':'Plantas revisadas','Plants bons':'Plantas buenas','Réussite (%)':'Éxito (%)','Cause rebuts':'Causa descartes','Auteur':'Autor','Inconnu':'Desconocido',
   'Les données sont sur cet appareil uniquement.':'Los datos están solo en este dispositivo.'
 };
@@ -1138,12 +1154,14 @@ function tabJour(ch, body){
         <span class="hint">Ajoute un relevé chaque fois que tu regardes le thermomètre.</span>
         <div class="list" id="j-rels"></div>
         <div class="field"><label for="j-h">Heure du relevé</label><input id="j-h" type="time" value="${hhmm()}"></div>
-        <div class="three">
-          <div class="field"><label for="j-ext">Hors palox (°C)</label><input id="j-ext" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
-          <div class="field"><label for="j-int">Dans palox (°C)</label><input id="j-int" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
-          <div class="field"><label for="j-hum">Humidité (%)</label><input id="j-hum" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="%"></div>
+        <div class="relgrid">
+          <span class="lab colh">${esc(L('Pièce (hors palox)','Sala (fuera del palox)'))}</span><span class="lab colh">${esc(L('Dans le palox','Dentro del palox'))}</span>
+          <div class="field"><label for="j-ext">${esc(L('Température (°C)','Temperatura (°C)'))}</label><input id="j-ext" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
+          <div class="field"><label for="j-int">${esc(L('Température (°C)','Temperatura (°C)'))}</label><input id="j-int" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
+          <div class="field"><label for="j-hext">${esc(L('Humidité (%)','Humedad (%)'))}</label><input id="j-hext" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="%"></div>
+          <div class="field"><label for="j-hint">${esc(L('Humidité (%)','Humedad (%)'))}</label><input id="j-hint" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="%"></div>
         </div>
-        <span class="ex">Ex. : 14h30 · 26 dehors · 27,5 dedans · 90 %. Une seule valeur suffit ; l'humidité est facultative.</span>
+        <span class="ex">${esc(L("Ex. : 14h30 · pièce 26 °C et 80 % · palox 27,5 °C et 95 %. Une seule valeur suffit.","Ej.: 14h30 · sala 26 °C y 80 % · palox 27,5 °C y 95 %. Basta con un valor."))}</span>
         <button class="primary" id="j-addrel" type="button">+ Ajouter ce relevé</button>
       </div>
       ${OBS_KEYS.map(k=>`<div class="field"><span class="lab">${OPTS[k].titre}${OPTS[k].facultatif?' <span class="hint">(facultatif)</span>':''}</span>${segHTML('seg-'+k,k,st[k])}</div>`).join('')}
@@ -1154,7 +1172,9 @@ function tabJour(ch, body){
       <div class="status" id="j-st" role="status"></div>
       ${others.length?`<div class="others"><span class="lab">Observations des collaborateurs</span>${others.map(o=>`<div><div class="who">${esc(authorName(o))}</div><div class="chips">${OBS_KEYS.filter(k=>o[k]).map(k=>`<span class="chip${OPTS[k].alert.includes(o[k])?' al':''}">${esc(OPTS[k].label+' : '+o[k])}</span>`).join('')}</div>${o.remarque?`<div class="rem">${esc(o.remarque)}</div>`:''}</div>`).join('')}</div>`:''}
     </form>
+    ${phytoCardHTML(ch,J)}
     ${sensorCardHTML(ch)}`;
+  bindPhyto(ch,J);
   bindSensorCard(ch);
   // jours
   const dEl=$('j-dates');
@@ -1168,15 +1188,14 @@ function tabJour(ch, body){
   const manual=rels.filter(r=>r.source!=='capteur'), cap=rels.filter(r=>r.source==='capteur');
   if(!rels.length) relEl.innerHTML='<div class="rel none">Aucun relevé pour ce jour.</div>';
   manual.forEach(r=>{ const d=document.createElement('div'); const o=relOut(ch,r); d.className='rel'+(o?' out':''); const s=document.createElement('span');
-    s.innerHTML=(o?'⚠ ':'')+esc((r.heure?fmtH(r.heure):'heure ?')+' · ext. '+(r.tExt!=null?fmtN(r.tExt)+' °C':'—')+' · dedans '+(r.tInt!=null?fmtN(r.tInt)+' °C':'—')+(r.hum!=null?' · '+fmtN(r.hum)+' %':''))+(isMine(r)?'':'<small>'+esc(authorName(r))+'</small>');
+    s.innerHTML=(o?'⚠ ':'')+esc([r.heure?fmtH(r.heure):L('heure ?','hora ?'), r.tExt!=null?L('pièce ','sala ')+fmtN(r.tExt)+' °C':null, r.tInt!=null?L('palox ','palox ')+fmtN(r.tInt)+' °C':null, humText(r)||null].filter(Boolean).join(' · '))+(isMine(r)?'':'<small>'+esc(authorName(r))+'</small>');
     d.appendChild(s);
     if(isMine(r)){ const b=document.createElement('button'); b.type='button'; b.textContent='Retirer'; b.onclick=async()=>{ await removeEntry(r); toast('Relevé retiré.'); renderChauffe(); }; d.appendChild(b); }
     relEl.appendChild(d); });
   if(cap.length){ const groups={}; cap.forEach(r=>{ const k=r.capteur||'?'; (groups[k]=groups[k]||[]).push(r); });
     Object.entries(groups).forEach(([name,list])=>{ const d=document.createElement('div'); const outN=list.filter(r=>relOut(ch,r)).length; d.className='rel cap'+(outN?' out':'');
       const rg=a=>{ a=a.filter(v=>v!=null); return a.length?(Math.min(...a)===Math.max(...a)?fmtN(Math.min(...a)):fmtN(Math.min(...a))+'–'+fmtN(Math.max(...a)))+' °C':null; };
-      const hs=list.map(r=>r.hum).filter(v=>v!=null);
-      const s=document.createElement('span'); s.innerHTML=(outN?'⚠ ':'')+esc(L('Capteur','Sensor')+' « '+name+' » · '+plural(list.length,'mesure','mesures','medición','mediciones')+[rg(list.map(r=>r.tExt))?' · ext. '+rg(list.map(r=>r.tExt)):'', rg(list.map(r=>r.tInt))?' · '+L('dedans','dentro')+' '+rg(list.map(r=>r.tInt)):'', hs.length?' · '+fmtN(Math.min(...hs))+'–'+fmtN(Math.max(...hs))+' %':''].join(''));
+      const s=document.createElement('span'); s.innerHTML=(outN?'⚠ ':'')+esc(L('Capteur','Sensor')+' « '+name+' » · '+plural(list.length,'mesure','mesures','medición','mediciones')+[rg(list.map(r=>r.tExt))?' · '+L('pièce ','sala ')+rg(list.map(r=>r.tExt)):'', rg(list.map(r=>r.tInt))?' · palox '+rg(list.map(r=>r.tInt)):'', rngTxt(list.map(hOut),' %')?' · '+L('HR pièce ','HR sala ')+rngTxt(list.map(hOut),' %'):'', rngTxt(list.map(hIn),' %')?' · HR palox '+rngTxt(list.map(hIn),' %'):''].join(''));
       d.appendChild(s);
       const b=document.createElement('button'); b.type='button'; b.textContent=L('Retirer','Quitar'); let c=false;
       b.onclick=async()=>{ if(!c){ c=true; b.textContent=L('Confirmer','Confirmar'); return; } await saveEntries(list.map(r=>Object.assign({},r,{supprime:true}))); toast(L('Mesures du capteur retirées pour ce jour.','Mediciones del sensor quitadas para este día.')); renderChauffe(); };
@@ -1202,17 +1221,17 @@ function tabJour(ch, body){
     OBS_KEYS.forEach(k=>e[k]=st[k]||''); e.remarque=rem; e.auteurNom=S.me.nom; delete e.supprime;
     await saveEntry(e); dirty=false; return true;
   }
-  const pending=()=>{ const te=num($('j-ext').value), ti=num($('j-int').value), hu=num($('j-hum').value); return (te==null&&ti==null&&hu==null)?null:{tExt:te,tInt:ti,hum:hu}; };
+  const pending=()=>{ const te=num($('j-ext').value), ti=num($('j-int').value), he=num($('j-hext').value), hi=num($('j-hint').value); return (te==null&&ti==null&&he==null&&hi==null)?null:{tExt:te,tInt:ti,humExt:he,humInt:hi}; };
   async function addRel(){ const stEl=$('j-st'); const p=pending();
-    if(!p){ stEl.textContent=($('j-ext').value||$('j-int').value||$('j-hum').value)?'Température illisible : tape seulement le nombre, par exemple 28 ou 28,5.':'Indique au moins une température.'; stEl.className='status err'; return; }
-    if(p.hum!=null && (p.hum<0||p.hum>100)){ stEl.textContent=L("L'humidité doit être entre 0 et 100 %.",'La humedad debe estar entre 0 y 100 %.'); stEl.className='status err'; return; }
-    try{ const ent={id:uid(), type:'releve', chauffeId:ch.id, jour:J, heure:$('j-h').value||'', tExt:p.tExt, tInt:p.tInt, hum:p.hum, auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()};
+    if(!p){ stEl.textContent=($('j-ext').value||$('j-int').value||$('j-hext').value||$('j-hint').value)?'Température illisible : tape seulement le nombre, par exemple 28 ou 28,5.':'Indique au moins une température.'; stEl.className='status err'; return; }
+    if([p.humExt,p.humInt].some(v=>v!=null && (v<0||v>100))){ stEl.textContent=L("L'humidité doit être entre 0 et 100 %.",'La humedad debe estar entre 0 y 100 %.'); stEl.className='status err'; return; }
+    try{ const ent={id:uid(), type:'releve', chauffeId:ch.id, jour:J, heure:$('j-h').value||'', tExt:p.tExt, tInt:p.tInt, humExt:p.humExt, humInt:p.humInt, auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()};
       await saveEntry(ent);
       if(dirty) await saveObs(true);
       const o=relOut(ch,ent); toast(o?(o==='cold'?L('⚠ Trop froid dans les palox : relevé enregistré.','⚠ Demasiado frío en los palox: lectura guardada.'):L('⚠ Trop chaud dans les palox : relevé enregistré.','⚠ Demasiado calor en los palox: lectura guardada.')):'Relevé de '+(fmtH($('j-h').value)||'(sans heure)')+' enregistré.'); renderChauffe(); }
     catch(err){ stEl.textContent='Enregistrement impossible : stockage plein ou bloqué.'; stEl.className='status err'; } }
   $('j-addrel').onclick=addRel;
-  ['j-ext','j-int','j-hum','j-h'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addRel(); } }));
+  ['j-ext','j-int','j-hext','j-hint','j-h'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addRel(); } }));
   $('j-form').onsubmit=async e=>{ e.preventDefault(); if(pending()) return addRel();
     try{ await saveObs(); toast('Journée enregistrée.'); renderChauffe(); }catch(err){ $('j-st').textContent='Enregistrement impossible : stockage plein ou bloqué.'; $('j-st').className='status err'; } };
 }
@@ -1253,11 +1272,11 @@ function tabHist(ch, body){
       const ints=rs.map(x=>x.tInt).filter(v=>v!=null), exts=rs.map(x=>x.tExt).filter(v=>v!=null);
       const r1=v=>Math.round(v*10)/10;
       const rng2=a=>!a.length?null:(Math.min(...a)===Math.max(...a)?fmtN(r1(Math.min(...a)))+' °C':fmtN(r1(Math.min(...a)))+'–'+fmtN(r1(Math.max(...a)))+' °C');
-      const hums=rs.map(x=>x.hum).filter(v=>v!=null);
-      const t=[exts.length?'ext. '+rng2(exts):null, ints.length?'dedans '+rng2(ints):null, hums.length?fmtN(r1(Math.min(...hums)))+(Math.min(...hums)!==Math.max(...hums)?'–'+fmtN(r1(Math.max(...hums))):'')+' %':null].filter(Boolean).join(' · ')+(rs.length>1?' ('+rs.length+' relevés)':'');
+      const t=[exts.length?L('pièce ','sala ')+rng2(exts):null, ints.length?'palox '+rng2(ints):null, rngTxt(rs.map(hOut),' %')?L('HR pièce ','HR sala ')+rngTxt(rs.map(hOut),' %'):null, rngTxt(rs.map(hIn),' %')?'HR palox '+rngTxt(rs.map(hIn),' %'):null].filter(Boolean).join(' · ')+(rs.length>1?' ('+plural(rs.length,'relevé','relevés','lectura','lecturas')+')':'');
       const multi=obs.length>1; const tal=dayTempAlerts(ch, DS[j-1]);
       b.innerHTML=`<div class="hhead"><span class="d">${esc(head)}</span><span class="mono">${esc(t||'—')}</span></div>`+
         (tal.length?`<div class="chips">${tal.map(x=>`<span class="chip al">${esc(x)}</span>`).join('')}</div>`:'')+
+        (ents.some(e=>e.type==='phyto')?`<div class="chips">${ents.filter(e=>e.type==='phyto').map(e=>`<span class="chip ph">🧪 ${esc(e.produit+(doseText(e)?' · '+doseText(e):''))}</span>`).join('')}</div>`:'')+
         obs.map(o=>`${multi?`<div class="who">${esc(authorName(o))}</div>`:''}<div class="chips">${OBS_KEYS.filter(k=>o[k]).map(k=>`<span class="chip${OPTS[k].alert.includes(o[k])?' al':''}">${esc(OPTS[k].label+' : '+o[k])}</span>`).join('')}</div>${o.remarque?`<div class="rem">${esc(o.remarque)}</div>`:''}`).join('')+
         (ph.length?`<div class="rem">${ph.length} photo${ph.length>1?'s':''}</div>`:'');
     }
@@ -1300,7 +1319,7 @@ function drawChart(ch){
   const hr=pts.length>120?6:13; pts.forEach((o,i)=>{ g+=`<circle class="hit" data-i="${i}" cx="${X(o.p.t).toFixed(1)}" cy="${Y(o.p.v).toFixed(1)}" r="${hr}"></circle>`; });
   const svg=$('chart'); svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML=g;
   svg.querySelectorAll('.hit').forEach(c=>c.onclick=()=>{ const o=pts[Number(c.dataset.i)], r=o.p.r;
-    $('g-tip').innerHTML='<b>'+esc(fmtN(o.p.v))+' °C</b>'+(r.hum!=null?' · '+esc(fmtN(r.hum))+' %':'')+' · '+esc(o.s.name.toLowerCase())+' · J'+r.jour+(ch.debut?' ('+esc(dayShort(ch,r.jour))+')':'')+(r.heure?' à '+esc(fmtH(r.heure)):'')+' · '+esc(r.source==='capteur'?L('capteur','sensor')+' « '+(r.capteur||'?')+' »':authorName(r))+(relOut(ch,r)&&o.s.k==='in'?' · <span class="al">'+esc(L('hors seuil','fuera de umbral'))+'</span>':''); });
+    $('g-tip').innerHTML='<b>'+esc(fmtN(o.p.v))+' °C</b>'+(humText(r)?' · '+esc(humText(r)):'')+' · '+esc(o.s.name.toLowerCase())+' · J'+r.jour+(ch.debut?' ('+esc(dayShort(ch,r.jour))+')':'')+(r.heure?' à '+esc(fmtH(r.heure)):'')+' · '+esc(r.source==='capteur'?L('capteur','sensor')+' « '+(r.capteur||'?')+' »':authorName(r))+(relOut(ch,r)&&o.s.k==='in'?' · <span class="al">'+esc(L('hors seuil','fuera de umbral'))+'</span>':''); });
   $('g-leg').innerHTML=shown.filter(s=>P[s.k].length).map(s=>`<span><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="${s.color}" stroke-width="2"></line><circle cx="11" cy="5" r="3.5" fill="${s.fill?s.color:'var(--surface)'}" stroke="${s.color}" stroke-width="1.5"></circle></svg>${esc(s.name)}</span>`).join('');
   const hk=S.courbe==='ext'?'ext':'in', li=P[hk][P[hk].length-1];
   $('g-title').textContent=li?(hk==='in'?'Dans les palox : ':'Extérieur des palox : ')+fmtN(li.v)+' °C au dernier relevé (J'+li.r.jour+')':'Températures';
@@ -1365,6 +1384,7 @@ function tabInfos(ch, body){
       ${ch.notes?`<div class="rem">${esc(ch.notes)}</div>`:''}
       ${lots.length?`<div class="scrollx"><table class="lotsTable"><thead><tr><th>Lot</th><th>Variété</th><th>Porte-greffe</th><th>Plants</th><th>Palox</th></tr></thead><tbody>${lots.map(l=>`<tr><td>${esc(l.lot)}</td><td>${esc(l.variete||'')}</td><td>${esc(l.pg||'')}</td><td>${l.qte!=null?l.qte.toLocaleString('fr-FR'):''}</td><td>${l.palox!=null?fmtN(l.palox):'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
     </div>
+    ${phytosOf(ch.id).length?`<div class="card" style="gap:10px"><h3>${esc(L('Traitements phytosanitaires de la chauffe','Tratamientos fitosanitarios de la calefacción'))}</h3>${phytoTableHTML(ch,false)}</div>`:''}
     <div class="hhead"><h2>Protocole de contrôle</h2><button class="ghost" id="i-pedit" type="button">${S.editingProto?'Terminer':'Modifier'}</button></div>
     <p class="note" id="i-pintro">${esc(S.protoIntro)}</p>
     <div class="proto" id="i-proto"></div>
@@ -1547,7 +1567,7 @@ function bindSensorCard(ch){
       <div class="field"><label for="sc-t">${esc(L('Colonne température','Columna temperatura'))}</label><select id="sc-t">${colOpts(cfg.tCol,true)}</select></div>
       <div class="field"><label for="sc-h">${esc(L('Colonne humidité','Columna humedad'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><select id="sc-h">${colOpts(cfg.hCol,true)}</select></div>
       <label class="check"><input type="checkbox" id="sc-f"${cfg.f2c?' checked':''}> ${esc(L('Les températures sont en °F : convertir en °C','Las temperaturas están en °F: convertir a °C'))}</label>
-      <div class="field"><span class="lab">${esc(L('Où était le capteur ?','¿Dónde estaba el sensor?'))}</span><div class="seg" id="sc-pos"><button type="button" data-v="in" aria-pressed="${cfg.pos==='in'}">${esc(L('Dans un palox','Dentro de un palox'))}</button><button type="button" data-v="ext" aria-pressed="${cfg.pos==='ext'}">${esc(L('Hors palox (air)','Fuera del palox (aire)'))}</button></div></div>
+      <div class="field"><span class="lab">${esc(L('Où était le capteur ?','¿Dónde estaba el sensor?'))}</span><div class="seg" id="sc-pos"><button type="button" data-v="in" aria-pressed="${cfg.pos==='in'}">${esc(L('Dans un palox','Dentro de un palox'))}</button><button type="button" data-v="ext" aria-pressed="${cfg.pos==='ext'}">${esc(L('Dans la pièce (hors palox)','En la sala (fuera del palox)'))}</button></div></div>
       <div class="field"><span class="lab">${esc(L('Garder','Guardar'))}</span><div class="seg" id="sc-step"><button type="button" data-v="60" aria-pressed="${cfg.step===60}">${esc(L('1 valeur par heure','1 valor por hora'))}</button><button type="button" data-v="30" aria-pressed="${cfg.step===30}">${esc(L('toutes les 30 min','cada 30 min'))}</button><button type="button" data-v="0" aria-pressed="${cfg.step===0}">${esc(L('toutes les mesures','todas las mediciones'))}</button></div><span class="ex">${esc(L('Avec « 1 valeur par heure », l\'app fait la moyenne des mesures de chaque heure.','Con « 1 valor por hora », la app promedia las mediciones de cada hora.'))}</span></div>
       <div class="field"><label for="sc-n">${esc(L('Nom du capteur','Nombre del sensor'))}</label><input id="sc-n" type="text" value="${esc(cfg.name)}"><span class="ex">${esc(L('Ex. : palox 12, fond de la salle. Réimporter avec le même nom remplace les mesures.','Ej.: palox 12, fondo de la sala. Reimportar con el mismo nombre reemplaza las mediciones.'))}</span></div>
       <div class="sumbox" id="sc-sum"></div>
@@ -1586,7 +1606,7 @@ function bindSensorCard(ch){
     const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10:null;
     const key=slug(cfg.name);
     const list=Array.from(buckets.values()).sort((a,b)=>a.jour-b.jour||a.slot-b.slot).map(b=>{ const heure=String(Math.floor(b.slot/60)).padStart(2,'0')+':'+String(b.slot%60).padStart(2,'0'); const t=avg(b.ts);
-      return {id:'cap:'+ch.id+':'+cfg.pos+':'+key+':'+b.jour+':'+heure, type:'releve', source:'capteur', capteur:cfg.name, pos:cfg.pos, chauffeId:ch.id, jour:b.jour, heure, tExt:cfg.pos==='ext'?t:null, tInt:cfg.pos==='in'?t:null, hum:avg(b.hs), auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()}; });
+      return {id:'cap:'+ch.id+':'+cfg.pos+':'+key+':'+b.jour+':'+heure, type:'releve', source:'capteur', capteur:cfg.name, pos:cfg.pos, chauffeId:ch.id, jour:b.jour, heure, tExt:cfg.pos==='ext'?t:null, tInt:cfg.pos==='in'?t:null, humExt:cfg.pos==='ext'?avg(b.hs):null, humInt:cfg.pos==='in'?avg(b.hs):null, auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()}; });
     return {total, inside, first, last, tMin, tMax, list};
   }
   function summary(){ const r=compute(); const f=d=>d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';
@@ -1599,7 +1619,114 @@ function bindSensorCard(ch){
   }
 }
 
+/* ---------- Traitements phytosanitaires ----------
+   L'app enregistre ce qui a été appliqué (produit, dose, méthode, cible) pour la traçabilité.
+   Les produits et doses sont ceux décidés par le responsable de la pépinière. */
+const PH_UNITS=['mL/L','g/L','mL/hL','g/hL','%','mL','g','L','kg'];
+const PH_METHODS=['Trempage','Pulvérisation','Arrosage','Fumigation','Autre'];
+const phytosOf = cid => entriesOf(cid,'phyto').sort((a,b)=>a.jour-b.jour||(a.heure||'').localeCompare(b.heure||''));
+const doseText = e => (e.dose!=null?fmtN(e.dose)+' '+(e.unite||''):'').trim();
+function phytoLine(e){ return [e.produit+(e.matiere?' ('+e.matiere+')':''), doseText(e)||null, e.methode?T(e.methode):null, e.cible||null, e.volume!=null?fmtN(e.volume)+' L '+L('de bouillie','de caldo'):null].filter(Boolean).join(' · '); }
+function knownProducts(){ const m={}; S.entrees.filter(e=>!e.supprime&&e.type==='phyto'&&e.produit).sort((a,b)=>(a.majLe||'').localeCompare(b.majLe||'')).forEach(e=>{ m[e.produit.toLowerCase()]=e; }); return Object.values(m); }
+function phytoCardHTML(ch, J){
+  return `<div class="card phyto" id="ph-card">
+    <div class="hhead"><h3>${esc(L('Traitements phytosanitaires','Tratamientos fitosanitarios'))}</h3><span class="mono">J${J}</span></div>
+    <div class="list" id="ph-list"></div>
+    <button class="ghost" type="button" id="ph-open">${esc(L('+ Ajouter un traitement','+ Agregar un tratamiento'))}</button>
+    <form id="ph-form" class="phform" hidden autocomplete="off">
+      <div class="field"><label for="ph-prod">${esc(L('Produit (nom commercial)','Producto (nombre comercial)'))}</label><input id="ph-prod" type="text" list="ph-known" placeholder="${esc(L('Nom du produit','Nombre del producto'))}"><datalist id="ph-known">${knownProducts().map(e=>`<option value="${esc(e.produit)}">${esc(e.matiere||'')}</option>`).join('')}</datalist></div>
+      <div class="field"><label for="ph-mat">${esc(L('Matière active','Ingrediente activo'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="ph-mat" type="text" placeholder="${esc(L('Ex. : captane','Ej.: captan'))}"></div>
+      <div class="two"><div class="field"><label for="ph-dose">${esc(L('Dose','Dosis'))}</label><input id="ph-dose" class="num" type="text" inputmode="decimal" placeholder="N°"></div>
+        <div class="field"><label for="ph-unit">${esc(L('Unité','Unidad'))}</label><select id="ph-unit">${PH_UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div></div>
+      <div class="field"><span class="lab">${esc(L('Méthode','Método'))}</span><div class="seg" id="ph-meth">${PH_METHODS.map(m=>`<button type="button" data-v="${esc(m)}" aria-pressed="false">${esc(T(m))}</button>`).join('')}</div></div>
+      <div class="field"><label for="ph-cible">${esc(L('Sur quoi ?','¿Sobre qué?'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="ph-cible" type="text" placeholder="${esc(L('Ex. : tous les palox, lots 9 à 14','Ej.: todos los palox, lotes 9 a 14'))}"></div>
+      <div class="two"><div class="field"><label for="ph-vol">${esc(L('Volume de bouillie (L)','Volumen de caldo (L)'))} <span class="hint">${esc(L('(facult.)','(opc.)'))}</span></label><input id="ph-vol" class="num" type="text" inputmode="decimal" placeholder="L"></div>
+        <div class="field"><label for="ph-h">${esc(L('Heure','Hora'))}</label><input id="ph-h" type="time" value="${hhmm()}"></div></div>
+      <div class="field"><label for="ph-rem">${esc(L('Remarques','Observaciones'))}</label><input id="ph-rem" type="text" placeholder="${esc(L('Ex. : décidé par le chef de culture','Ej.: decidido por el jefe de cultivo'))}"></div>
+      <p class="note">${esc(L("Note ce qui a réellement été appliqué, avec la dose indiquée par le responsable ou l'étiquette.","Anota lo que realmente se aplicó, con la dosis indicada por el responsable o la etiqueta."))}</p>
+      <div class="row"><button class="primary" type="submit" id="ph-ok">${esc(L('Enregistrer le traitement','Guardar el tratamiento'))}</button><button class="ghost" type="button" id="ph-x">${esc(L('Annuler','Cancelar'))}</button></div>
+      <div class="status" id="ph-st"></div>
+    </form>
+  </div>`;
+}
+function bindPhyto(ch, J){
+  const list=phytosOf(ch.id).filter(e=>e.jour===J), el=$('ph-list'), form=$('ph-form');
+  let editing=null, meth='';
+  const setMeth=v=>{ meth=v||''; $('ph-meth').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===meth)); };
+  $('ph-meth').querySelectorAll('button').forEach(b=>b.onclick=()=>setMeth(meth===b.dataset.v?'':b.dataset.v));
+  const fill=e=>{ $('ph-prod').value=e?e.produit||'':''; $('ph-mat').value=e?e.matiere||'':''; $('ph-dose').value=e&&e.dose!=null?fmtN(e.dose):''; $('ph-unit').value=e&&e.unite?e.unite:'mL/L'; $('ph-cible').value=e?e.cible||'':''; $('ph-vol').value=e&&e.volume!=null?fmtN(e.volume):''; $('ph-h').value=e&&e.heure?e.heure:hhmm(); $('ph-rem').value=e?e.remarque||'':''; setMeth(e?e.methode:''); };
+  const open=e=>{ editing=e||null; fill(e); form.hidden=false; $('ph-open').hidden=true; $('ph-st').textContent=''; $('ph-ok').textContent=e?L('Enregistrer les modifications','Guardar los cambios'):L('Enregistrer le traitement','Guardar el tratamiento'); $('ph-prod').focus(); };
+  const close=()=>{ editing=null; form.hidden=true; $('ph-open').hidden=false; };
+  $('ph-open').onclick=()=>open(null); $('ph-x').onclick=close;
+  $('ph-prod').onchange=()=>{ if(editing) return; const k=knownProducts().find(e=>e.produit.toLowerCase()===$('ph-prod').value.trim().toLowerCase()); if(!k) return;
+    if(!$('ph-mat').value) $('ph-mat').value=k.matiere||''; if(!$('ph-dose').value&&k.dose!=null) $('ph-dose').value=fmtN(k.dose); if(k.unite) $('ph-unit').value=k.unite; if(!meth) setMeth(k.methode);
+    $('ph-st').textContent=L('Dernière utilisation reprise : vérifie la dose.','Se retomó el último uso: revisa la dosis.'); $('ph-st').className='status'; };
+  form.onsubmit=async e=>{ e.preventDefault(); const st=$('ph-st'); const err=t=>{ st.textContent=t; st.className='status err'; };
+    const produit=$('ph-prod').value.trim(); if(!produit) return err(L('Indique le nom du produit.','Indica el nombre del producto.'));
+    const ds=$('ph-dose').value.trim(), dose=num(ds); if(!ds) return err(L('Indique la dose utilisée.','Indica la dosis utilizada.')); if(dose==null||dose<0) return err(L('Dose illisible : tape seulement le nombre, par exemple 2 ou 2,5.','Dosis ilegible: escribe solo el número, por ejemplo 2 o 2,5.'));
+    const vs=$('ph-vol').value.trim(), vol=num(vs); if(vs && (vol==null||vol<0)) return err(L('Volume illisible.','Volumen ilegible.'));
+    const ent=Object.assign({}, editing||{id:'ph-'+uid(), type:'phyto', chauffeId:ch.id, jour:J, creeLe:nowIso()}, {produit, matiere:$('ph-mat').value.trim(), dose, unite:$('ph-unit').value, methode:meth, cible:$('ph-cible').value.trim(), volume:vol, heure:$('ph-h').value||'', remarque:$('ph-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom});
+    delete ent.supprime;
+    try{ await saveEntry(ent); toast(L('Traitement enregistré : ','Tratamiento guardado: ')+produit+'.'); renderChauffe(); }catch(x){ err(L('Enregistrement impossible : stockage plein ou bloqué.','No se pudo guardar: almacenamiento lleno o bloqueado.')); } };
+  if(!list.length){ el.innerHTML=`<div class="rel none">${esc(L('Aucun traitement ce jour-là.','Ningún tratamiento ese día.'))}</div>`; return; }
+  list.forEach(e=>{ const d=document.createElement('div'); d.className='phrow';
+    d.innerHTML=`<div><b>🧪 ${esc(e.produit)}</b>${e.matiere?` <span class="hint">(${esc(e.matiere)})</span>`:''}<div class="mono">${esc([e.heure?fmtH(e.heure):null, doseText(e), e.methode?T(e.methode):null].filter(Boolean).join(' · '))}</div>${e.cible||e.volume!=null?`<div class="hint">${esc([e.cible, e.volume!=null?fmtN(e.volume)+' L '+L('de bouillie','de caldo'):null].filter(Boolean).join(' · '))}</div>`:''}${e.remarque?`<div class="rem">${esc(e.remarque)}</div>`:''}<div class="who">${esc(authorName(e))}</div></div>`;
+    if(isMine(e)){ const act=document.createElement('div'); act.className='lotact';
+      const m=document.createElement('button'); m.type='button'; m.className='ghost'; m.textContent=L('Modifier','Modificar'); m.onclick=()=>open(e);
+      const x=document.createElement('button'); x.type='button'; x.className='ghost danger'; x.textContent=L('Supprimer','Eliminar'); let c=false; x.onclick=async()=>{ if(!c){ c=true; x.textContent=L('Confirmer','Confirmar'); return; } await removeEntry(e); toast(L('Traitement supprimé.','Tratamiento eliminado.')); renderChauffe(); };
+      act.append(m,x); d.appendChild(act); }
+    el.appendChild(d); });
+}
+function phytoTableHTML(ch, forPrint){
+  const list=phytosOf(ch.id); if(!list.length) return '';
+  return `<div class="scrollx"><table class="${forPrint?'':'lotsTable'}"><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Heure','Hora'))}</th><th>${esc(L('Produit','Producto'))}</th><th>${esc(L('Matière active','Ingrediente activo'))}</th><th>${esc(L('Dose','Dosis'))}</th><th>${esc(L('Méthode','Método'))}</th><th>${esc(L('Cible','Objetivo'))}</th><th>${esc(L('Bouillie (L)','Caldo (L)'))}</th><th>${esc(L('Par','Por'))}</th></tr></thead><tbody>${list.map(e=>`<tr><td>J${e.jour}${ch.debut?' · '+esc(dayShort(ch,e.jour)):''}</td><td>${esc(e.heure?fmtH(e.heure):'')}</td><td><b>${esc(e.produit)}</b>${e.remarque?'<br><span class="small">'+esc(e.remarque)+'</span>':''}</td><td>${esc(e.matiere||'')}</td><td>${esc(doseText(e))}</td><td>${esc(e.methode?T(e.methode):'')}</td><td>${esc(e.cible||'')}</td><td>${e.volume!=null?esc(fmtN(e.volume)):''}</td><td>${esc(authorName(e))}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
 /* ---------- 2. Onglet Bilan ---------- */
+
+/* ---------- Graphiques réutilisés dans l'app et dans le registre (PDF) ----------
+   print=true : couleurs fixes (papier blanc, fichier envoyé sans les styles de l'app). */
+const PG_COLORS=['#7a2e3e','#2f6fc0','#1f7a45','#c27c0e','#6b4fa3','#0f8a8a','#b5466b','#5b6a61'];
+function chartInk(print){ return print ? {text:'#555', strong:'#1b1b1b', grid:'#dcd5d6', bad:'#a3322a', zone:'#f1e4e7', bg:'#ffffff', in:'#1f7a45', ext:'#2f6fc0'}
+  : {text:'var(--muted)', strong:'var(--fg)', grid:'var(--line)', bad:'var(--bad)', zone:'var(--accent-soft)', bg:'var(--surface)', in:'var(--s-in)', ext:'var(--s-ext)'}; }
+function histoSVG(ch, print){
+  const C=chartInk(print);
+  const lots=lotsWithBilan(ch).filter(l=>bilanRate(l.b)!=null); if(!lots.length) return '';
+  const pgs=[...new Set(lots.map(l=>l.pg||'?'))]; const col=k=>PG_COLORS[pgs.indexOf(k)%PG_COLORS.length];
+  const mean=aggRate(lotsWithBilan(ch)).rate;
+  const W=640, H=262, ml=36, mr=10, mt=32, mb=34, pw=W-ml-mr, ph=H-mt-mb, n=lots.length;
+  const slot=pw/n, bw=Math.max(4,Math.min(46,slot*0.72));
+  const Y=v=>mt+(1-v)*ph; const fs=n>30?8:n>20?9:10.5;
+  let g=`<rect x="0" y="0" width="${W}" height="${H}" fill="${print?C.bg:'none'}"></rect>`;
+  [0,0.25,0.5,0.75,1].forEach(v=>{ g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.grid}" stroke-width="1"></line><text x="${ml-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="${C.text}" font-family="ui-monospace,Menlo,monospace">${v*100}%</text>`; });
+  lots.forEach((l,i)=>{ const r=bilanRate(l.b), x=ml+i*slot+(slot-bw)/2, y=Y(r);
+    g+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(0)-y).toFixed(1)}" rx="2" fill="${col(l.pg||'?')}"><title>${esc(L('Lot ','Lote ')+l.lot+' · '+[l.variete,l.pg].filter(Boolean).join(' / ')+' · '+pct(r))}</title></rect>`;
+    if(slot>=14) g+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="${fs}" fill="${C.strong}" font-family="ui-monospace,Menlo,monospace">${Math.round(r*100)}</text>`;
+    g+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-mb+14}" text-anchor="middle" font-size="${fs}" fill="${C.text}" font-family="ui-monospace,Menlo,monospace">${esc(l.lot)}</text>`; });
+  if(mean!=null) g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(mean)}" y2="${Y(mean)}" stroke="${C.strong}" stroke-width="1.4" stroke-dasharray="6 4"></line><line x1="${ml+pw-118}" x2="${ml+pw-96}" y1="10" y2="10" stroke="${C.strong}" stroke-width="1.4" stroke-dasharray="6 4"></line><text x="${ml+pw-2}" y="14" text-anchor="end" font-size="11.5" font-weight="700" fill="${C.strong}" font-family="system-ui,sans-serif">${esc(L('moyenne ','promedio ')+pct(mean))}</text>`;
+  g+=`<text x="${ml}" y="${H-4}" font-size="10.5" fill="${C.text}" font-family="system-ui,sans-serif">${esc(L('N° de lot','N° de lote'))}</text>`;
+  const leg=pgs.map(k=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${col(k)}"></i>${esc(k)}</span>`).join('');
+  return `<svg class="histo" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(L('Histogramme de la réussite par lot','Histograma del éxito por lote'))}" style="display:block;width:100%;height:auto">${g}</svg><div class="hleg" style="font-size:12.5px;color:${C.text};display:flex;flex-wrap:wrap;gap:4px 0">${esc(L('Porte-greffe : ','Portainjerto: '))}&nbsp;${leg}</div>`;
+}
+function tempSVG(ch, print){
+  const C=chartInk(print); const rs=releves(ch.id); const D=ch.duree; const SU=seuilsOf(ch);
+  const P={in:[],ext:[]}; rs.forEach(r=>{ const t=r.jour-1+hourOf(r)/24; if(r.tInt!=null) P.in.push({t,v:r.tInt,r}); if(r.tExt!=null) P.ext.push({t,v:r.tExt,r}); });
+  const all=P.in.concat(P.ext).map(p=>p.v).concat([SU.inMin,SU.inMax].filter(v=>v!=null)); if(!P.in.length && !P.ext.length) return '';
+  const W=640,H=260,ml=34,mr=58,mt=22,mb=30,pw=W-ml-mr,ph=H-mt-mb;
+  let lo=Math.floor((Math.min(...all)-2)/5)*5, hi=Math.ceil((Math.max(...all)+2)/5)*5; if(hi-lo<10) hi=lo+10;
+  const X=t=>ml+t/D*pw, Y=v=>mt+(hi-v)/(hi-lo)*ph; const mono='font-family="ui-monospace,Menlo,monospace"';
+  let g=`<rect x="0" y="0" width="${W}" height="${H}" fill="${print?C.bg:'none'}"></rect>`;
+  g+=`<rect x="${X(ch.finDe-1)}" y="${mt}" width="${X(ch.finA)-X(ch.finDe-1)}" height="${ph}" fill="${C.zone}"></rect><text x="${(X(ch.finDe-1)+X(ch.finA))/2}" y="${mt-6}" text-anchor="middle" font-size="10.5" fill="${C.text}" font-family="system-ui,sans-serif">${esc(L('fin prévue','fin prevista'))}</text>`;
+  for(let v=lo;v<=hi;v+=5) g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.grid}"></line><text x="${ml-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="${C.text}" ${mono}>${v}°</text>`;
+  const step=Math.max(1,Math.ceil(D/10)); for(let j=1;j<=D;j+=step) g+=`<text x="${X(j-0.5)}" y="${H-8}" text-anchor="middle" font-size="11" fill="${C.text}" ${mono}>J${j}</text>`;
+  [['inMax',L('max','máx')],['inMin',L('min','mín')]].forEach(([k,lab])=>{ if(SU[k]!=null) g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(SU[k])}" y2="${Y(SU[k])}" stroke="${C.bad}" stroke-width="1.2" stroke-dasharray="5 4"></line><text x="${ml+pw+4}" y="${Y(SU[k])+4}" font-size="10.5" fill="${C.bad}" font-family="system-ui,sans-serif">${lab} ${fmtN(SU[k])}°</text>`; });
+  [['ext',C.ext],['in',C.in]].forEach(([k,c])=>{ const a=P[k].sort((x,y)=>x.t-y.t); if(!a.length) return;
+    if(a.length>1) g+=`<polyline fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round" points="${a.map(p=>X(p.t).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ')}"></polyline>`;
+    a.forEach(p=>{ const out=k==='in'&&relOut(ch,p.r); if(p.r.source==='capteur'){ if(out) g+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="2" fill="${C.bad}"></circle>`; } else g+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.4" fill="${out?C.bad:(k==='in'?c:C.bg)}" stroke="${out?C.bad:c}" stroke-width="1.6"></circle>`; });
+    const last=a[a.length-1]; g+=`<text x="${X(last.t)+7}" y="${Y(last.v)+(k==='ext'?12:-4)}" font-size="11" fill="${C.strong}" ${mono}>${fmtN(last.v)}°</text>`; });
+  const leg=[['in',L('Dans les palox','En los palox'),C.in],['ext',L('Extérieur des palox','Exterior de los palox'),C.ext]].filter(([k])=>P[k].length).map(([k,lab,c])=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px"><i style="display:inline-block;width:16px;height:3px;background:${c}"></i>${esc(lab)}</span>`).join('')+(SU.inMin!=null||SU.inMax!=null?`<span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:16px;border-top:2px dashed ${C.bad}"></i>${esc(L('seuils','umbrales'))}</span>`:'');
+  return `<svg class="tempc" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(L('Courbe des températures','Curva de temperaturas'))}" style="display:block;width:100%;height:auto">${g}</svg><div style="font-size:12.5px;color:${C.text};display:flex;flex-wrap:wrap;gap:4px 0">${leg}</div>`;
+}
 function rateBar(r){ return `<div class="bar" aria-hidden="true"><span style="width:${r==null?0:Math.round(r*100)}%"></span></div>`; }
 function tabBilan(ch, body){
   const lots=lotsWithBilan(ch); const agg=aggRate(lots); const done=lots.filter(l=>bilanRate(l.b)!=null).length;
@@ -1610,11 +1737,12 @@ function tabBilan(ch, body){
     <div class="card">
       <div class="hhead"><h3>${esc(L('Réussite de la chauffe','Éxito de la calefacción'))}</h3><span class="mono">${esc(plural(done,'lot','lots','lote','lotes'))} / ${lots.length}</span></div>
       <div class="bigrate">${pct(agg.rate)}</div>
-      <p class="note">${agg.rate==null?esc(L('Pas encore de bilan : touche un lot ci-dessous pour le saisir.','Todavía no hay balance: toca un lote abajo para ingresarlo.')):esc(L('Moyenne pondérée par la taille des lots. ','Promedio ponderado por el tamaño de los lotes. ')+plural(agg.tries,'plant trié','plants triés','planta revisada','plantas revisadas')+', '+plural(agg.bons,'bon','bons','buena','buenas')+'.')}</p>
+      <p class="note">${agg.rate==null?esc(L('Pas encore de bilan : touche un lot ci-dessous pour le saisir.','Todavía no hay balance: toca un lote abajo para ingresarlo.')):esc(L('Moyenne pondérée par la taille des lots.','Promedio ponderado por el tamaño de los lotes.')+(agg.tries?' '+plural(agg.tries,'plant trié','plants triés','planta revisada','plantas revisadas')+', '+plural(agg.bons,'bon','bons','buena','buenas')+'.':''))}</p>
       ${grpHTML(L('Par porte-greffe','Por portainjerto'),'pg')}
       ${grpHTML(L('Par variété','Por variedad'),'variete')}
       <div class="field"><label for="b-date">${esc(L('Date de sortie de chauffe','Fecha de salida de la calefacción'))}</label><input id="b-date" type="date" value="${esc(ch.sortie||'')}"></div>
     </div>
+    ${done?`<div class="card" style="gap:10px"><h3>${esc(L('Réussite par lot','Éxito por lote'))}</h3>${histoSVG(ch,false)}<p class="note">${esc(L('Chaque barre est un lot, colorée selon son porte-greffe. Le trait pointillé est la moyenne de la chauffe.','Cada barra es un lote, coloreada según su portainjerto. La línea punteada es el promedio de la calefacción.'))}</p></div>`:''}
     <div class="list" id="b-list"></div>
     <div class="card" style="gap:10px">
       <span class="lab">${esc(L('Ajouter un lot qui n\'est pas dans la liste','Agregar un lote que no está en la lista'))}</span>
@@ -1622,7 +1750,7 @@ function tabBilan(ch, body){
       <button class="ghost" type="button" id="b-add">${esc(L('+ Saisir le bilan de ce lot','+ Ingresar el balance de este lote'))}</button>
     </div>`;
   $('b-date').onchange=async()=>{ await saveChauffe(Object.assign({},ch,{sortie:$('b-date').value||''})); toast(L('Date de sortie enregistrée.','Fecha de salida guardada.')); };
-  $('b-add').onclick=()=>{ const lot=$('b-nl').value.trim(); if(!lot){ $('b-nl').focus(); return; } S.bilanEdit={chId:ch.id, lot, variete:$('b-nv').value.trim(), pg:$('b-np').value.trim()}; renderChauffe(); setTimeout(()=>{ const f=$('be-tries'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },30); };
+  $('b-add').onclick=()=>{ const lot=$('b-nl').value.trim(); if(!lot){ $('b-nl').focus(); return; } S.bilanEdit={chId:ch.id, lot, variete:$('b-nv').value.trim(), pg:$('b-np').value.trim()}; renderChauffe(); setTimeout(()=>{ const f=$('be-pctbox')&&!$('be-pctbox').hidden?$('be-pct'):$('be-tries'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },30); };
   const el=$('b-list');
   const editing=S.bilanEdit && S.bilanEdit.chId===ch.id ? S.bilanEdit : null;
   const all=lots.slice(); if(editing && !all.some(l=>l.lot===String(editing.lot))) all.push({lot:String(editing.lot), variete:editing.variete, pg:editing.pg, qte:null, b:null});
@@ -1632,9 +1760,12 @@ function tabBilan(ch, body){
     if(editing && String(editing.lot)===l.lot){
       const b=l.b||{};
       d.classList.add('editing');
-      d.innerHTML=head+`<div class="two"><div class="field"><label for="be-tries">${esc(L('Plants triés','Plantas revisadas'))}</label><input id="be-tries" class="num" type="text" inputmode="numeric" value="${b.tries!=null?b.tries:''}" placeholder="N°"></div><div class="field"><label for="be-bons">${esc(L('Plants bons','Plantas buenas'))}</label><input id="be-bons" class="num" type="text" inputmode="numeric" value="${b.bons!=null?b.bons:''}" placeholder="N°"></div></div>
+      const mode0 = isPctBilan(l.b) ? 'pct' : (l.b ? 'compte' : (S.bilanMode||'compte'));
+      d.innerHTML=head+`<div class="field"><span class="lab">${esc(L('Comment saisir ?','¿Cómo ingresar?'))}</span><div class="seg" id="be-mode"><button type="button" data-v="compte" aria-pressed="${mode0==='compte'}">${esc(L('Compter les plants','Contar las plantas'))}</button><button type="button" data-v="pct" aria-pressed="${mode0==='pct'}">${esc(L('Pourcentage direct','Porcentaje directo'))}</button></div></div>
+        <div id="be-pctbox"${mode0==='pct'?'':' hidden'} class="field"><label for="be-pct">${esc(L('Réussite (%)','Éxito (%)'))}</label><input id="be-pct" class="num" type="text" inputmode="decimal" value="${isPctBilan(b)?esc(fmtN(b.pct)):''}" placeholder="%"><span class="ex">${esc(L('Ex. : 92 ou 87,5. Pratique si le chef de culture te donne directement le pourcentage.','Ej.: 92 u 87,5. Útil si el jefe de cultivo te da directamente el porcentaje.'))}</span></div>
+        <div id="be-cntbox"${mode0==='pct'?' hidden':''} class="field"><div class="two"><div class="field"><label for="be-tries">${esc(L('Plants triés','Plantas revisadas'))}</label><input id="be-tries" class="num" type="text" inputmode="numeric" value="${b.tries!=null?b.tries:''}" placeholder="N°"></div><div class="field"><label for="be-bons">${esc(L('Plants bons','Plantas buenas'))}</label><input id="be-bons" class="num" type="text" inputmode="numeric" value="${b.bons!=null?b.bons:''}" placeholder="N°"></div></div>
         <span class="ex">${esc(L("Ex. : 200 triés, 184 bons → 92 %. Un échantillon suffit.","Ej.: 200 revisadas, 184 buenas → 92 %. Basta con una muestra."))}</span>
-        <div class="sumbox" id="be-calc"></div>
+        <div class="sumbox" id="be-calc"></div></div>
         <div class="field"><span class="lab">${esc(L('Cause principale des rebuts','Causa principal de los descartes'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></span><div class="seg" id="be-cause">${CAUSES.map(c=>`<button type="button" data-v="${esc(c)}" aria-pressed="${b.cause===c}">${esc(T(c))}</button>`).join('')}</div></div>
         <div class="field"><label for="be-rem">${esc(L('Remarques','Observaciones'))}</label><input id="be-rem" type="text" value="${esc(b.remarque||'')}"></div>
         <div class="row"><button class="primary" type="button" id="be-ok">${esc(L('Enregistrer le bilan','Guardar el balance'))}</button><button class="ghost" type="button" id="be-x">${esc(L('Annuler','Cancelar'))}</button></div>
@@ -1646,19 +1777,26 @@ function tabBilan(ch, body){
       const calc=()=>{ const t=num($('be-tries').value), g=num($('be-bons').value); const c=$('be-calc');
         c.innerHTML = t>0 && g!=null && g<=t ? `<b>${pct(g/t)}</b> · ${esc(plural(t-g,'rebut','rebuts','descarte','descartes'))}` : ''; };
       $('be-tries').oninput=calc; $('be-bons').oninput=calc; calc();
+      let mode=mode0;
+      $('be-mode').querySelectorAll('button').forEach(x=>x.onclick=()=>{ mode=x.dataset.v; S.bilanMode=mode; $('be-mode').querySelectorAll('button').forEach(y=>y.setAttribute('aria-pressed',y===x)); $('be-pctbox').hidden=mode!=='pct'; $('be-cntbox').hidden=mode==='pct'; $('be-st').textContent=''; const f=$(mode==='pct'?'be-pct':'be-tries'); if(f) f.focus(); });
       $('be-x').onclick=()=>{ S.bilanEdit=null; renderChauffe(); };
       if($('be-del')){ let c=false; $('be-del').onclick=async()=>{ if(!c){ c=true; $('be-del').textContent=L('Toucher encore pour supprimer','Tocar otra vez para eliminar'); return; } await removeEntry(l.b); S.bilanEdit=null; toast(L('Bilan supprimé.','Balance eliminado.')); renderChauffe(); }; }
       $('be-ok').onclick=async()=>{ const t=num($('be-tries').value), g=num($('be-bons').value), stEl=$('be-st');
+        const base=()=>Object.assign({}, l.b||{id:'bilan:'+ch.id+':'+l.lot, type:'bilan', chauffeId:ch.id, lot:l.lot, creeLe:nowIso()}, {jour:ch.duree, variete:l.variete, pg:l.pg, cause, remarque:$('be-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom});
+        if(mode==='pct'){ const pv=num($('be-pct').value);
+          if(pv==null||pv<0||pv>100){ stEl.textContent=L('Indique un pourcentage entre 0 et 100.','Indica un porcentaje entre 0 y 100.'); stEl.className='status err'; return; }
+          const ent=Object.assign(base(),{pct:Math.round(pv*10)/10, tries:null, bons:null}); delete ent.supprime; await saveEntry(ent); S.bilanEdit=null;
+          toast(L('Bilan du lot ','Balance del lote ')+l.lot+L(' enregistré : ',' guardado: ')+pct(bilanRate(ent))+'.'); renderChauffe(); return; }
         if(!(t>0)){ stEl.textContent=L('Indique le nombre de plants triés.','Indica el número de plantas revisadas.'); stEl.className='status err'; return; }
         if(g==null||g<0){ stEl.textContent=L('Indique le nombre de plants bons.','Indica el número de plantas buenas.'); stEl.className='status err'; return; }
         if(g>t){ stEl.textContent=L('Il ne peut pas y avoir plus de plants bons que de plants triés.','No puede haber más plantas buenas que revisadas.'); stEl.className='status err'; return; }
-        const ent=Object.assign({}, l.b||{id:'bilan:'+ch.id+':'+l.lot, type:'bilan', chauffeId:ch.id, lot:l.lot, creeLe:nowIso()}, {jour:ch.duree, variete:l.variete, pg:l.pg, tries:Math.round(t), bons:Math.round(g), cause, remarque:$('be-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom});
+        const ent=Object.assign(base(),{tries:Math.round(t), bons:Math.round(g), pct:null});
         delete ent.supprime; await saveEntry(ent); S.bilanEdit=null; toast(L('Bilan du lot ','Balance del lote ')+l.lot+L(' enregistré : ',' guardado: ')+pct(bilanRate(ent))+'.'); renderChauffe(); };
       return;
     }
-    d.innerHTML=head+(l.b?`<div class="raterow">${rateBar(r)}<span class="rv mono">${pct(r)}</span></div><div class="rem">${esc(plural(l.b.bons,'bon','bons','buena','buenas')+L(' sur ',' de ')+plural(l.b.tries,'trié','triés','revisada','revisadas'))}${l.b.cause?' · '+esc(L('cause : ','causa: ')+T(l.b.cause)):''}${l.b.remarque?' · '+esc(l.b.remarque):''}</div><div class="who">${esc(authorName(l.b))}</div>`:`<div class="rem">${esc(L('Bilan pas encore saisi.','Balance aún no ingresado.'))}</div>`);
+    d.innerHTML=head+(l.b?`<div class="raterow">${rateBar(r)}<span class="rv mono">${pct(r)}</span></div><div class="rem">${esc(bilanDetail(l.b))}${l.b.cause?' · '+esc(L('cause : ','causa: ')+T(l.b.cause)):''}${l.b.remarque?' · '+esc(l.b.remarque):''}</div><div class="who">${esc(authorName(l.b))}</div>`:`<div class="rem">${esc(L('Bilan pas encore saisi.','Balance aún no ingresado.'))}</div>`);
     const btn=document.createElement('button'); btn.type='button'; btn.className='ghost'; btn.textContent=l.b?L('Modifier le bilan','Modificar el balance'):L('Saisir le bilan','Ingresar el balance');
-    btn.onclick=()=>{ S.bilanEdit={chId:ch.id, lot:l.lot, variete:l.variete, pg:l.pg}; renderChauffe(); setTimeout(()=>{ const f=$('be-tries'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },30); };
+    btn.onclick=()=>{ S.bilanEdit={chId:ch.id, lot:l.lot, variete:l.variete, pg:l.pg}; renderChauffe(); setTimeout(()=>{ const f=$('be-pctbox')&&!$('be-pctbox').hidden?$('be-pct'):$('be-tries'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },30); };
     d.appendChild(btn); el.appendChild(d); });
 }
 
@@ -1738,6 +1876,8 @@ const REG_CSS=`.paper{background:#fff;color:#1b1b1b;border:1px solid var(--line,
 .paper .visa{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
 .paper .visa div{border-top:1px solid #888;padding-top:4px;font-size:12px;color:#555;min-height:48px}
 .paper section{break-inside:auto}
+.paper .fig{break-inside:avoid;page-break-inside:avoid}
+.paper svg{max-width:100%}
 .paper .scrollx{overflow-x:auto}`;
 function registreHTML(ch){
   const lots=lotsWithBilan(ch), ds=dayStats(ch), s=seuilsOf(ch), agg=aggRate(lots);
@@ -1758,13 +1898,15 @@ function registreHTML(ch){
       ${ch.sortie?`<dt>${esc(L('Sortie','Salida'))}</dt><dd>${esc(iso2(ch.sortie))}</dd>`:''}
       <dt>${esc(L('Lots','Lotes'))}</dt><dd>${(ch.lots||[]).length}${tq?' · '+esc(fmtN(tq))+' '+esc(L('plants','plantas')):''}${tp?' · '+esc(fmtN(tp))+' palox':''}</dd>
       <dt>${esc(L('Seuils','Umbrales'))}</dt><dd>${hasSeuils(ch)?esc(seuilsText(ch).replace(/^[^:]+:\s*/,'')):'—'}</dd>
-      <dt>${esc(L('Réussite','Éxito'))}</dt><dd>${agg.rate==null?'—':'<b>'+pct(agg.rate)+'</b> ('+esc(plural(agg.tries,'plant trié','plants triés','planta revisada','plantas revisadas'))+')'}</dd>
+      <dt>${esc(L('Réussite','Éxito'))}</dt><dd>${agg.rate==null?'—':'<b>'+pct(agg.rate)+'</b>'+(agg.tries?' ('+esc(plural(agg.tries,'plant trié','plants triés','planta revisada','plantas revisadas'))+')':'')}</dd>
       ${ch.notes?`<dt>${esc(L('Notes','Notas'))}</dt><dd>${esc(ch.notes)}</dd>`:''}
     </dl></section>
-    ${lots.length?`<section><h3>${esc(L('1. Lots','1. Lotes'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Plants','Plantas'))}</th><th>Palox</th><th>${esc(L('Triés','Revisadas'))}</th><th>${esc(L('Bons','Buenas'))}</th><th>${esc(L('Réussite','Éxito'))}</th><th>${esc(L('Cause rebuts','Causa descartes'))}</th></tr></thead><tbody>${lots.map(l=>{ const c=(ch.lots||[]).find(x=>String(x.lot)===l.lot)||{}; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete)}</td><td>${esc(l.pg)}</td><td>${l.qte!=null?esc(fmtN(l.qte)):''}</td><td>${c.palox!=null?esc(fmtN(c.palox)):''}</td><td>${l.b?l.b.tries:''}</td><td>${l.b?l.b.bons:''}</td><td>${l.b?pct(bilanRate(l.b)):''}</td><td>${l.b&&l.b.cause?esc(T(l.b.cause)):''}</td></tr>`; }).join('')}</tbody></table></div></section>`:''}
-    <section><h3>${esc(L('2. Conditions jour par jour','2. Condiciones día por día'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° ext. (°C)','T° ext. (°C)'))}</th><th>${esc(L('T° palox min–max (°C)','T° palox mín–máx (°C)'))}</th><th>${esc(L('Moy. (°C)','Prom. (°C)'))}</th><th>${esc(L('Humidité (%)','Humedad (%)'))}</th><th>${esc(L('Mesures','Mediciones'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${ds.map(d=>{ const a=dayTempAlerts(ch,d).concat(...obsByDay(d.j).map(alertsOf)); return `<tr><td>J${d.j}</td><td>${esc(dayShort(ch,d.j))}</td><td>${rng(d.extMin,d.extMax)}</td><td${d.cold||d.hot?' class="al"':''}>${rng(d.inMin,d.inMax)}</td><td>${d.inMean!=null?fmtN(r1(d.inMean)):'—'}</td><td>${rng(d.humMin,d.humMax)}</td><td>${d.n?d.n+(d.nCap?' ('+esc(L('dont ','de ellas '))+d.nCap+' '+esc(L('capteur','sensor'))+')':''):'—'}</td><td class="al">${a.map(esc).join('<br>')}</td></tr>`; }).join('')}</tbody></table></div></section>
-    <section><h3>${esc(L('3. Observations et actions','3. Observaciones y acciones'))}</h3>${ds.map(d=>{ const os=obsByDay(d.j); if(!os.length) return ''; return `<div class="day"><b>J${d.j}${ch.debut?' · '+esc(dayLabel(ch,d.j)):''}</b><ul>${os.map(o=>`<li>${OBS_KEYS.filter(k=>o[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(o[k]))).join(' · ')}${o.remarque?'<br>'+esc(o.remarque):''} <span class="small">— ${esc(authorName(o))}</span></li>`).join('')}</ul></div>`; }).join('')||'<p class="small">—</p>'}</section>
-    ${ctrl.length?`<section><h3>${esc(L('4. Contrôles par lot','4. Controles por lote'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Plants regardés','Plantas revisadas'))}</th><th>${esc(L('Constat','Observación'))}</th><th>${esc(L('Par','Por'))}</th></tr></thead><tbody>${ctrl.map(r=>`<tr><td>J${r.jour}</td><td>${esc(r.lot)}${r.variete||r.pg?' · '+esc([r.variete,r.pg].filter(Boolean).join('/')):''}</td><td>${r.nb!=null?esc(r.nb):''}</td><td>${LOT_KEYS.filter(k=>r[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(r[k]))).join(' · ')}${r.remarque?'<br>'+esc(r.remarque):''}</td><td>${esc(authorName(r))}</td></tr>`).join('')}</tbody></table></div></section>`:''}
+    ${releves(ch.id).length?`<section class="fig"><h3>${esc(L('Courbe des températures','Curva de temperaturas'))}</h3>${tempSVG(ch,true)}</section>`:''}
+    ${lots.length?`<section><h3>${esc(L('1. Lots','1. Lotes'))}</h3>${lots.some(l=>bilanRate(l.b)!=null)?`<div class="fig" style="margin-bottom:10px"><b class="small">${esc(L('Réussite par lot (%)','Éxito por lote (%)'))}</b>${histoSVG(ch,true)}</div>`:''}<div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Plants','Plantas'))}</th><th>Palox</th><th>${esc(L('Triés','Revisadas'))}</th><th>${esc(L('Bons','Buenas'))}</th><th>${esc(L('Réussite','Éxito'))}</th><th>${esc(L('Cause rebuts','Causa descartes'))}</th></tr></thead><tbody>${lots.map(l=>{ const c=(ch.lots||[]).find(x=>String(x.lot)===l.lot)||{}; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete)}</td><td>${esc(l.pg)}</td><td>${l.qte!=null?esc(fmtN(l.qte)):''}</td><td>${c.palox!=null?esc(fmtN(c.palox)):''}</td><td>${l.b&&l.b.tries>0?l.b.tries:''}</td><td>${l.b&&l.b.tries>0?l.b.bons:''}</td><td>${l.b?pct(bilanRate(l.b)):''}</td><td>${l.b&&l.b.cause?esc(T(l.b.cause)):''}</td></tr>`; }).join('')}</tbody></table></div></section>`:''}
+    <section><h3>${esc(L('2. Conditions jour par jour','2. Condiciones día por día'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° pièce (°C)','T° sala (°C)'))}</th><th>${esc(L('T° palox min–max (°C)','T° palox mín–máx (°C)'))}</th><th>${esc(L('Moy. (°C)','Prom. (°C)'))}</th><th>${esc(L('HR pièce (%)','HR sala (%)'))}</th><th>${esc(L('HR palox (%)','HR palox (%)'))}</th><th>${esc(L('Mesures','Mediciones'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${ds.map(d=>{ const a=dayTempAlerts(ch,d).concat(...obsByDay(d.j).map(alertsOf)); return `<tr><td>J${d.j}</td><td>${esc(dayShort(ch,d.j))}</td><td>${rng(d.extMin,d.extMax)}</td><td${d.cold||d.hot?' class="al"':''}>${rng(d.inMin,d.inMax)}</td><td>${d.inMean!=null?fmtN(r1(d.inMean)):'—'}</td><td>${rng(d.humExtMin,d.humExtMax)}</td><td>${rng(d.humInMin,d.humInMax)}</td><td>${d.n?d.n+(d.nCap?' ('+esc(L('dont ','de ellas '))+d.nCap+' '+esc(L('capteur','sensor'))+')':''):'—'}</td><td class="al">${a.map(esc).join('<br>')}</td></tr>`; }).join('')}</tbody></table></div></section>
+    <section><h3>${esc(L('3. Traitements phytosanitaires','3. Tratamientos fitosanitarios'))}</h3>${phytoTableHTML(ch,true)||'<p class="small">'+esc(L('Aucun traitement enregistré.','Ningún tratamiento registrado.'))+'</p>'}</section>
+    <section><h3>${esc(L('4. Observations et actions','4. Observaciones y acciones'))}</h3>${ds.map(d=>{ const os=obsByDay(d.j); if(!os.length) return ''; return `<div class="day"><b>J${d.j}${ch.debut?' · '+esc(dayLabel(ch,d.j)):''}</b><ul>${os.map(o=>`<li>${OBS_KEYS.filter(k=>o[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(o[k]))).join(' · ')}${o.remarque?'<br>'+esc(o.remarque):''} <span class="small">— ${esc(authorName(o))}</span></li>`).join('')}</ul></div>`; }).join('')||'<p class="small">—</p>'}</section>
+    ${ctrl.length?`<section><h3>${esc(L('5. Contrôles par lot','5. Controles por lote'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Plants regardés','Plantas revisadas'))}</th><th>${esc(L('Constat','Observación'))}</th><th>${esc(L('Par','Por'))}</th></tr></thead><tbody>${ctrl.map(r=>`<tr><td>J${r.jour}</td><td>${esc(r.lot)}${r.variete||r.pg?' · '+esc([r.variete,r.pg].filter(Boolean).join('/')):''}</td><td>${r.nb!=null?esc(r.nb):''}</td><td>${LOT_KEYS.filter(k=>r[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(r[k]))).join(' · ')}${r.remarque?'<br>'+esc(r.remarque):''}</td><td>${esc(authorName(r))}</td></tr>`).join('')}</tbody></table></div></section>`:''}
     <section><h3>${esc(L('Intervenants','Participantes'))}</h3><p>${Object.entries(authors).map(([n,k])=>esc(n)+' ('+esc(plural(k,'note','notes','nota','notas'))+')').join(' · ')||'—'}</p></section>
     <div class="visa"><div>${esc(L('Visa du responsable','Visto bueno del responsable'))}</div><div>${esc(L('Date','Fecha'))}</div></div>
     <p class="small">${esc(L('Document généré par ','Documento generado por ')+APP_NAME+' '+appVer()+L(' à partir des notes saisies sur l\'appareil.',' a partir de las notas ingresadas en el dispositivo.'))}</p>`;
@@ -1796,23 +1938,24 @@ function summary(ch){
   const out=[ch.nom+' — '+ch.duree+' jours, fin prévue J'+ch.finDe+'–J'+ch.finA+(ch.debut?' (début '+dayLabel(ch,1)+')':''),''];
   for(let j=1;j<=ch.duree;j++){ if(!dayFilled(ch.id,j)) continue; const ents=dayEntries(ch.id,j);
     out.push('J'+j+(ch.debut?' · '+dayLabel(ch,j):''));
-    ents.filter(e=>e.type==='releve'&&e.source!=='capteur').sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).forEach(r=>out.push('  T° '+(r.heure?fmtH(r.heure):L('heure ?','hora ?'))+' · ext. '+(r.tExt!=null?fmtN(r.tExt)+' °C':'—')+' · '+L('dedans','dentro')+' '+(r.tInt!=null?fmtN(r.tInt)+' °C':'—')+(r.hum!=null?' · '+fmtN(r.hum)+' %':'')+' ('+authorName(r)+')'));
-    const cps=ents.filter(e=>e.type==='releve'&&e.source==='capteur'); if(cps.length){ const ti=cps.map(r=>r.tInt).filter(v=>v!=null), te=cps.map(r=>r.tExt).filter(v=>v!=null), hu=cps.map(r=>r.hum).filter(v=>v!=null); const rg=a=>fmtN(Math.min(...a))+'–'+fmtN(Math.max(...a)); out.push('  '+L('Capteur','Sensor')+' : '+plural(cps.length,'mesure','mesures','medición','mediciones')+(te.length?' · ext. '+rg(te)+' °C':'')+(ti.length?' · '+L('dedans','dentro')+' '+rg(ti)+' °C':'')+(hu.length?' · '+rg(hu)+' %':'')); }
+    ents.filter(e=>e.type==='releve'&&e.source!=='capteur').sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')).forEach(r=>out.push('  T° '+(r.heure?fmtH(r.heure):L('heure ?','hora ?'))+' · '+L('pièce ','sala ')+(r.tExt!=null?fmtN(r.tExt)+' °C':'—')+' · palox '+(r.tInt!=null?fmtN(r.tInt)+' °C':'—')+(humText(r)?' · '+humText(r):'')+' ('+authorName(r)+')'));
+    const cps=ents.filter(e=>e.type==='releve'&&e.source==='capteur'); if(cps.length){ const ti=cps.map(r=>r.tInt).filter(v=>v!=null), te=cps.map(r=>r.tExt).filter(v=>v!=null), rg=a=>fmtN(Math.min(...a))+'–'+fmtN(Math.max(...a)); out.push('  '+L('Capteur','Sensor')+' : '+plural(cps.length,'mesure','mesures','medición','mediciones')+(te.length?' · '+L('pièce ','sala ')+rg(te)+' °C':'')+(ti.length?' · palox '+rg(ti)+' °C':'')+(rngTxt(cps.map(hOut),' %')?' · '+L('HR pièce ','HR sala ')+rngTxt(cps.map(hOut),' %'):'')+(rngTxt(cps.map(hIn),' %')?' · HR palox '+rngTxt(cps.map(hIn),' %'):'')); }
     const tal=dayTempAlerts(ch, dayStats(ch)[j-1]); if(tal.length) out.push('  ⚠ '+tal.join(' ; '));
+    ents.filter(e=>e.type==='phyto').forEach(e=>out.push('  🧪 '+L('Traitement','Tratamiento')+' '+(e.heure?fmtH(e.heure)+' ':'')+': '+phytoLine(e)+' ('+authorName(e)+')'));
     ents.filter(e=>e.type==='obs').forEach(o=>{ const obs=OBS_KEYS.filter(k=>o[k]).map(k=>OPTS[k].label+' : '+o[k]); if(obs.length) out.push('  '+obs.join(' · ')+' ('+authorName(o)+')'); const al=alertsOf(o); if(al.length) out.push('  ⚠ À signaler : '+al.join(', ')); if(o.remarque) out.push('  '+o.remarque); });
     const ph=ents.filter(e=>e.type==='photo').length; if(ph) out.push('  '+ph+' photo'+(ph>1?'s':'')+' dans le journal');
   }
   const lots=entriesOf(ch.id,'lot').sort((a,b)=>a.jour-b.jour);
   if(lots.length){ out.push('','Contrôles par lot'); lots.forEach(r=>out.push('  J'+r.jour+' · Lot '+r.lot+((r.variete||r.pg)?' ('+[r.variete,r.pg].filter(Boolean).join('/')+')':'')+(r.nb?' · '+r.nb+' plants':'')+LOT_KEYS.filter(k=>r[k]).map(k=>' · '+OPTS[k].label+' : '+r[k]).join('')+(r.remarque?' · '+r.remarque:'')+' ('+authorName(r)+')')); }
-  const bl=lotsWithBilan(ch).filter(l=>l.b); if(bl.length){ const ag=aggRate(lotsWithBilan(ch)); out.push('',L('Bilan de fin de chauffe','Balance de fin de calefacción')+' : '+pct(ag.rate)); bl.forEach(l=>out.push('  '+L('Lot ','Lote ')+l.lot+((l.variete||l.pg)?' ('+[l.variete,l.pg].filter(Boolean).join('/')+')':'')+' · '+pct(bilanRate(l.b))+' ('+l.b.bons+'/'+l.b.tries+')'+(l.b.cause?' · '+T(l.b.cause):''))); }
+  const bl=lotsWithBilan(ch).filter(l=>l.b); if(bl.length){ const ag=aggRate(lotsWithBilan(ch)); out.push('',L('Bilan de fin de chauffe','Balance de fin de calefacción')+' : '+pct(ag.rate)); bl.forEach(l=>out.push('  '+L('Lot ','Lote ')+l.lot+((l.variete||l.pg)?' ('+[l.variete,l.pg].filter(Boolean).join('/')+')':'')+' · '+pct(bilanRate(l.b))+(isPctBilan(l.b)?'':' ('+l.b.bons+'/'+l.b.tries+')')+(l.b.cause?' · '+T(l.b.cause):''))); }
   return out.join('\n');
 }
 function csv(ch){
   const c=v=>{ const s=v==null?'':String(v); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
   const dec=v=>v==null||v===''?'':String(v).replace('.',',');
-  const rows=[['Jour','Date','Type','Heure','T° ext. (°C)','T° dans palox (°C)','Humidité (%)','Source','Lot','Variété','Porte-greffe','Nb plants','Plants triés','Plants bons','Réussite (%)','Cause rebuts',...OBS_KEYS.map(k=>OPTS[k].label),'Remarques','Auteur'].map(T)];
+  const rows=[['Jour','Date','Type','Heure','T° pièce (°C)','T° dans palox (°C)','HR pièce (%)','HR palox (%)','Source','Lot','Variété','Porte-greffe','Nb plants','Plants triés','Plants bons','Réussite (%)','Cause rebuts','Produit','Matière active','Dose','Unité','Méthode','Cible','Bouillie (L)',...OBS_KEYS.map(k=>OPTS[k].label),'Remarques','Auteur'].map(T)];
   const ents=entriesOf(ch.id).filter(e=>e.type!=='photo').sort((a,b)=>a.jour-b.jour||(a.heure||'').localeCompare(b.heure||''));
-  ents.forEach(e=>rows.push(['J'+e.jour, dayShort(ch,e.jour), T({releve:'Relevé',obs:'Observation',lot:'Contrôle lot',bilan:'Bilan'}[e.type]||e.type), e.heure||'', dec(e.tExt), dec(e.tInt), dec(e.hum), e.source==='capteur'?L('capteur','sensor')+' '+(e.capteur||''):'', e.lot||'', e.variete||'', e.pg||'', e.nb??'', e.tries??'', e.bons??'', e.type==='bilan'&&bilanRate(e)!=null?dec(Math.round(bilanRate(e)*1000)/10):'', T(e.cause||''), ...OBS_KEYS.map(k=>T(e[k]||'')), e.remarque||'', e.source==='capteur'?'':authorName(e)]));
+  ents.forEach(e=>rows.push(['J'+e.jour, dayShort(ch,e.jour), T({releve:'Relevé',obs:'Observation',lot:'Contrôle lot',bilan:'Bilan',phyto:'Traitement'}[e.type]||e.type), e.heure||'', dec(e.tExt), dec(e.tInt), dec(e.type==='releve'?hOut(e):null), dec(e.type==='releve'?hIn(e):null), e.source==='capteur'?L('capteur','sensor')+' '+(e.capteur||''):'', e.lot||'', e.variete||'', e.pg||'', e.nb??'', e.tries??'', e.bons??'', e.type==='bilan'&&bilanRate(e)!=null?dec(Math.round(bilanRate(e)*1000)/10):'', T(e.cause||''), e.produit||'', e.matiere||'', dec(e.dose), e.unite||'', T(e.methode||''), e.cible||'', dec(e.volume), ...OBS_KEYS.map(k=>T(e[k]||'')), e.remarque||'', e.source==='capteur'?'':authorName(e)]));
   return rows.map(r=>r.map(c).join(';')).join('\r\n');
 }
 async function shareFile(file, st, okMsg){
@@ -1868,7 +2011,7 @@ async function importFile(e, st){
 })();
 /* L'app d'origine (même adresse github.io) peut effacer nos fichiers hors ligne quand elle se met à jour :
    on vérifie au démarrage et on les remet en cache si besoin. */
-async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v2.0.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
+async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v2.2.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
 if(location.protocol!=='file:') setTimeout(ensureShell, 4000);
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').then(reg=>{

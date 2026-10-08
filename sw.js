@@ -1,7 +1,7 @@
 // Chauffes Pro — service worker : l'app fonctionne hors ligne.
 // Tous ses caches commencent par « chauffespro- » : il ne touche jamais aux caches
 // du Journal de chauffes d'origine (même adresse github.io).
-const VERSION='chauffespro-v2.0.0';
+const VERSION='chauffespro-v2.2.0';
 const FONTS='chauffespro-fonts';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png'];
 self.addEventListener('install',e=>{ e.waitUntil(caches.open(VERSION).then(c=>c.addAll(SHELL.map(u=>new Request(u,{cache:'reload'})))).then(()=>self.skipWaiting())); });

@@ -10,14 +10,18 @@ C'est une app SÉPARÉE. Elle ne touche pas à ton Journal de chauffes :
 NOUVEAUTÉS
 1. Seuils d'alerte (Infos → Modifier) : minimum / maximum dans les palox, variation max. d'un jour à l'autre,
    rappel si pas de relevé depuis X heures. Alertes à la saisie, sur la courbe (lignes rouges) et dans le suivi.
-2. Humidité (%) dans chaque relevé.
+2. Chaque relevé : température et humidité (%) dans la pièce ET dans le palox.
+8. Traitements phytosanitaires (Saisie → carte « Traitements ») : produit, matière active, dose + unité,
+   méthode, cible, volume de bouillie. Repris dans le Suivi, l'onglet Infos, le registre PDF et l'export Excel.
 3. Import d'un enregistreur de température (Saisie → en bas) : fichier .csv ou .xlsx exporté depuis le capteur.
    L'app trouve les colonnes date/heure, température, humidité, et range les mesures par jour.
-4. Onglet Bilan : à la sortie de chauffe, plants triés / plants bons par lot → taux de réussite,
-   par porte-greffe et par variété.
+4. Onglet Bilan : à la sortie de chauffe, pour chaque lot, soit plants triés / plants bons,
+   soit directement le pourcentage de réussite. Réussite par porte-greffe, par variété,
+   et histogramme de la réussite par lot.
 5. Comparer les saisons (Accueil) : vue d'ensemble des chauffes, courbes de température superposées,
    réussite par variété × porte-greffe d'une chauffe à l'autre.
-6. Registre de traçabilité (Suivi → Registre) : document imprimable / PDF avec lots, conditions jour par jour,
+6. Registre de traçabilité (Suivi → Registre) : document imprimable / PDF avec la courbe des températures,
+   l'histogramme de réussite, les lots, les conditions jour par jour,
    observations, intervenants et visa. Nom de la pépinière dans Réglages.
 7. Français / Español (Réglages, ou dès l'écran de bienvenue).
 
@@ -32,3 +36,8 @@ MISE EN LIGNE (depuis l'iPad, comme la première fois)
 ESSAYER AVEC TES VRAIES NOTES
 Dans le Journal de chauffes : « Partager mes notes » → Enregistrer dans Fichiers.
 Dans Chauffes Pro : « Importer » → choisis ce fichier. Ton Journal de chauffes n'est pas modifié.
+
+METTRE À JOUR L'APP (version 2.2.0)
+Dans le dépôt chauffes-pro sur GitHub : « Add file » → « Upload files » → choisis index.html et sw.js
+(tu peux aussi remettre tous les fichiers) → « Commit changes ».
+Au prochain lancement avec internet, l'app propose « Recharger ». Tes notes ne sont pas touchées.
