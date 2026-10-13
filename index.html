@@ -48,9 +48,10 @@ h1{font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.0
 .progress{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
 .progress span{display:block;height:100%;background:var(--accent)}
 .endzone{font-size:13px;color:var(--muted)}
-nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;background:var(--sunk);padding:4px;border-radius:10px}
-nav.tabs button{font:600 14px var(--f-body);border:0;background:transparent;color:var(--muted);padding:9px 1px;border-radius:7px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:370px){nav.tabs button{font-size:12.5px}}
+nav.tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;background:var(--sunk);padding:4px;border-radius:10px}
+nav.tabs button{font:600 13.5px var(--f-body);border:0;background:transparent;color:var(--muted);padding:9px 1px;border-radius:7px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:370px){nav.tabs button{font-size:11.5px}}
+table.mini{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}table.mini th,table.mini td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}table.mini th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}table.mini .small{color:var(--muted);font-size:12px}
 nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 section.panel{display:grid;gap:16px;padding-top:8px}
 h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:4px 0 0}
@@ -176,6 +177,7 @@ input[type=time]{min-width:0;max-width:100%;display:block}
 .syncbar.wait i{background:var(--warn)} .syncbar.bad{color:var(--bad);border-color:var(--bad)} .syncbar.bad i{background:var(--bad)}
 @keyframes pulse{from{opacity:1}to{opacity:.3}}
 .photos button.nophoto{display:none}
+.etabbox{display:grid;gap:8px;padding:10px;border:1px dashed var(--line);border-radius:10px}
 .ex{font-size:13px;color:var(--muted);font-style:italic}
 .confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
 /* ---- Chauffes Pro ---- */
@@ -221,23 +223,6 @@ details.sensor:not([open]){gap:0}
 .homebtns .ghost{min-height:50px;background:var(--surface)}
 .chauffecard .rappel{font-size:13px;color:var(--warn);font-weight:600}
 .langseg{max-width:320px}
-.mapcard{gap:10px}
-.pamap{height:min(62vh,440px);border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#1a1f1c;z-index:0}
-.mapmsg{padding:16px;font-size:14px;color:var(--muted);background:var(--sunk);border-radius:10px}
-.seg.mini button{min-height:34px;padding:4px 10px;font-size:13.5px;flex:0 0 auto}
-.maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
-.maplegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.maplegend i.pos{background:transparent;border:2px dashed #ff3b30}
-.leaflet-tooltip.parclabel{background:rgba(20,20,20,.62);color:#fff;border:0;box-shadow:none;font:600 12px var(--f-body);padding:2px 6px;border-radius:5px}
-.leaflet-tooltip.parclabel:before{display:none}
-.leaflet-container{font:12px var(--f-body)}
-.girow{display:grid;gap:4px;padding-bottom:6px;border-bottom:1px dashed var(--line)}
-.girow select{min-height:38px;font-size:14px}
-.geoline{font-size:14px}
-.maplinks .linkb{font-size:13.5px;min-height:36px;padding:6px 10px;text-decoration:none;display:inline-flex;align-items:center;flex:0 1 auto}
-.tdot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:1px}
-.item.flash{outline:3px solid var(--accent);outline-offset:2px}
-.geobox{border-top:1px dashed var(--line);padding-top:10px}
 .prodbtn{display:grid;gap:2px;text-align:left;border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg);border-radius:12px;padding:14px 16px;cursor:pointer;font:700 17px var(--f-body)}
 .prodbtn small{font:400 13.5px var(--f-body);color:var(--muted)}
 .prodnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -309,7 +294,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -478,11 +463,12 @@ const bilansOf = cid => entriesOf(cid,'bilan');
 const bilanOf = (cid, lot) => bilansOf(cid).find(b=>String(b.lot)===String(lot));
 /* Un bilan se saisit soit en comptant (plants triés / plants bons), soit directement en pourcentage. */
 const isPctBilan = b => !!b && b.pct!=null && !(b.tries>0);
-const bilanRate = b => !b ? null : (b.tries>0 && b.bons!=null ? Math.max(0,Math.min(1,b.bons/b.tries)) : (b.pct!=null ? Math.max(0,Math.min(1,b.pct/100)) : null));
-const bilanDetail = b => isPctBilan(b) ? L('saisi en pourcentage','ingresado en porcentaje') : plural(b.bons,'bon','bons','buena','buenas')+L(' sur ',' de ')+plural(b.tries,'trié','triés','revisada','revisadas');
+const bilanBons = b => (b.bons||0)+(b.c2||0);
+const bilanRate = b => !b ? null : (b.tries>0 && b.bons!=null ? Math.max(0,Math.min(1,bilanBons(b)/b.tries)) : (b.pct!=null ? Math.max(0,Math.min(1,b.pct/100)) : null));
+const bilanDetail = b => isPctBilan(b) ? L('saisi en pourcentage','ingresado en porcentaje') : ((b.c2||b.rech) ? fmtN(b.bons)+L(' 1er choix',' 1ª')+(b.c2?' · '+fmtN(b.c2)+L(' 2e choix',' 2ª'):'')+(b.rech?' · '+fmtN(b.rech)+L(' à remettre en chauffe',' a recalentar'):'')+L(' sur ',' de ')+plural(b.tries,'trié','triés','revisada','revisadas') : plural(b.bons,'bon','bons','buena','buenas')+L(' sur ',' de ')+plural(b.tries,'trié','triés','revisada','revisadas'))+(b.dateTri?' · '+L('trié le ','revisado el ')+b.dateTri.split('-').reverse().join('/'):'');
 /* Réussite moyenne pondérée : par le nombre de plants du lot s'il est connu, sinon par le nombre de plants triés. */
 function aggRate(items){ let w=0, g=0, tries=0, bons=0, plants=0;
-  items.forEach(({b, qte})=>{ const r=bilanRate(b); if(r==null) return; const wt=qte>0?qte:(b.tries>0?b.tries:100); w+=wt; g+=r*wt; if(b.tries>0){ tries+=b.tries; bons+=b.bons||0; } if(qte>0) plants+=qte; });
+  items.forEach(({b, qte})=>{ const r=bilanRate(b); if(r==null) return; const wt=qte>0?qte:(b.tries>0?b.tries:100); w+=wt; g+=r*wt; if(b.tries>0){ tries+=b.tries; bons+=bilanBons(b); } if(qte>0) plants+=qte; });
   return {rate:w?g/w:null, tries, bons, plants}; }
 function lotsWithBilan(ch){
   const lots=(ch.lots||[]).map(l=>({lot:String(l.lot), variete:l.variete||'', pg:l.pg||'', qte:l.qte||null}));
@@ -795,7 +781,7 @@ const ES = {
   "Aucun relevé pour l'instant : ajoute-en un dans l'onglet Saisie.":'Ninguna lectura por ahora: agrega una en la pestaña Ingreso.',"Aucun relevé pour cette courbe pour l'instant.":'Ninguna lectura para esta curva por ahora.',
   'Partager cette chauffe':'Compartir esta calefacción',"Pour l'envoyer à quelqu'un qui n'a pas l'app (WhatsApp, mail…).":'Para enviarla a alguien que no tiene la app (WhatsApp, correo…).','Copier le résumé':'Copiar el resumen','Fichier pour Excel':'Archivo para Excel','Résumé copié.':'Resumen copiado.','Le texte est sélectionné : fais « Copier » puis colle-le dans ton message.':'El texto está seleccionado: toca « Copiar » y pégalo en tu mensaje.','Touche un jour pour le compléter ou le corriger.':'Toca un día para completarlo o corregirlo.','à remplir':'por completar',
   // Par lot
-  "Quand tu sors des plants d'un palox, note ici le lot vérifié : si un lot ou un porte-greffe évolue moins bien, tu sauras lequel.":'Cuando saques plantas de un palox, anota aquí el lote revisado: si un lote o un portainjerto evoluciona peor, sabrás cuál.','N° de lot':'N° de lote','Variété':'Variedad','Porte-greffe':'Portainjerto','Ex. : lot 12 · SYR · SO4. Si le lot est dans la liste de la chauffe, variété et porte-greffe se remplissent seuls.':'Ej.: lote 12 · SYR · SO4. Si el lote está en la lista de la calefacción, variedad y portainjerto se completan solos.','Nombre de plants regardés':'Número de plantas revisadas','Ex. : 5':'Ej.: 5','Remarques':'Observaciones','Ce que tu as remarqué sur ce lot':'Lo que notaste en este lote','Ex. : palox du fond, cal visible sur la moitié des plants.':'Ej.: palox del fondo, callo visible en la mitad de las plantas.','Ajouter ce contrôle':'Agregar este control',"Aucun contrôle par lot pour l'instant.":'Ningún control por lote por ahora.','Indique le numéro du lot.':'Indica el número del lote.','Contrôle supprimé.':'Control eliminado.',"Photo prête : touche « Ajouter ce contrôle » pour l'enregistrer.":'Foto lista: toca « Agregar este control » para guardarla.',
+  "Quand tu sors des plants d'un palox, note ici le lot vérifié : si un lot ou un porte-greffe évolue moins bien, tu sauras lequel.":'Cuando saques plantas de un palox, anota aquí el lote revisado: si un lote o un portainjerto evoluciona peor, sabrás cuál.','N° de lot':'N° de lote','Variété':'Variedad','Porte-greffe':'Portainjerto','Ex. : lot 12 · SYR · SO4. Si le lot est dans la liste de la chauffe, variété et porte-greffe se remplissent seuls.':'Ej.: lote 12 · SYR · SO4. Si el lote está en la lista de la calefacción, variedad y portainjerto se completan solos.','Nombre de plants regardés':'Número de plantas revisadas','Ex. : 5':'Ej.: 5','Remarques':'Observaciones','Raison du problème':'Causa del problema','Triage':'Selección','Plants morts':'Plantas muertas','Plants regardés':'Plantas revisadas','Feuilles':'Hojas','Pousses':'Brotes','Actions':'Acciones','HR acclim. (%)':'HR aclim. (%)','T° acclim. (°C)':'T° aclim. (°C)','Date du tri':'Fecha de la selección','À remettre en chauffe':'A recalentar','2e choix':'2ª selección','Ce que tu as remarqué sur ce lot':'Lo que notaste en este lote','Ex. : palox du fond, cal visible sur la moitié des plants.':'Ej.: palox del fondo, callo visible en la mitad de las plantas.','Ajouter ce contrôle':'Agregar este control',"Aucun contrôle par lot pour l'instant.":'Ningún control por lote por ahora.','Indique le numéro du lot.':'Indica el número del lote.','Contrôle supprimé.':'Control eliminado.',"Photo prête : touche « Ajouter ce contrôle » pour l'enregistrer.":'Foto lista: toca « Agregar este control » para guardarla.',
   // Infos
   'La chauffe':'La calefacción','Durée':'Duración','Lots':'Lotes','Lot':'Lote','Porte-greffes':'Portainjertos','Plants':'Plantas','Palox':'Palox','Protocole de contrôle':'Protocolo de control','Comment':'Cómo','Normal':'Normal','Alerte':'Alerta','Contrôle':'Control','Introduction':'Introducción','Retirer ce contrôle':'Quitar este control','+ Ajouter un contrôle':'+ Agregar un control',"Revenir au protocole d'origine":'Volver al protocolo original','Enregistrer le protocole':'Guardar el protocolo','Protocole enregistré.':'Protocolo guardado.','Nouveau contrôle':'Nuevo control',
   "Protocole appris avec Gérard. Les palox sont couverts d'une couverture humide et d'un plastique pour garder un maximum d'humidité.":'Protocolo aprendido con Gérard. Los palox se cubren con una manta húmeda y un plástico para mantener la máxima humedad.',
@@ -936,7 +922,7 @@ function renderHome(){
     const b=document.createElement('button'); b.type='button'; b.className='item chauffecard';
     b.innerHTML=`<div class="hhead"><span class="d" style="font-size:18px">${esc(ch.nom)}</span><span class="mono">J${n||'–'} / ${ch.duree}</span></div>
       <div class="progress"><span style="width:${Math.min(100,n/ch.duree*100)}%"></span></div>
-      <div class="meta">${ch.debut?'<span>Début '+esc(dayShort(ch,1))+'</span>':''}<span>${(ch.lots||[]).length} lots</span><span>${nb} note${nb>1?'s':''}</span>${al?'<span class="al">'+al+' alerte'+(al>1?'s':'')+'</span>':''}${chauffeRate(ch).rate!=null?'<span>'+esc(L('réussite ','éxito ')+pct(chauffeRate(ch).rate))+'</span>':''}${ch.archive?'<span>Archivée</span>':''}</div>${rappelDue(ch)!=null?`<div class="rappel">⏱ ${esc(L('Pas de relevé depuis ','Sin lectura desde hace ')+fmtAge(rappelDue(ch)))}</div>`:''}`;
+      <div class="meta">${ch.etab&&ch.etab.nom?'<span><b>'+esc(ch.etab.nom)+'</b></span>':''}${ch.debut?'<span>Début '+esc(dayShort(ch,1))+'</span>':''}<span>${(ch.lots||[]).length} lots</span><span>${nb} note${nb>1?'s':''}</span>${al?'<span class="al">'+al+' alerte'+(al>1?'s':'')+'</span>':''}${chauffeRate(ch).rate!=null?'<span>'+esc(L('réussite ','éxito ')+pct(chauffeRate(ch).rate))+'</span>':''}${ch.archive?'<span>Archivée</span>':''}</div>${rappelDue(ch)!=null?`<div class="rappel">⏱ ${esc(L('Pas de relevé depuis ','Sin lectura desde hace ')+fmtAge(rappelDue(ch)))}</div>`:''}`;
     b.onclick=()=>{ const ln=lastDay(ch); go('chauffe',{chauffeId:ch.id, tab:'jour', jour:Math.max(1,ln||1)}); };
     el.appendChild(b);
   });
@@ -983,6 +969,14 @@ function renderChauffeForm(){
       </div>
       <span class="ex">Ex. : une chauffe de 19 jours qui se termine entre J17 et J19.</span>
       <div class="field"><label for="f-notes">Infos sur la chauffe <span class="hint">(facultatif)</span></label><textarea id="f-notes" placeholder="Informations utiles sur cette chauffe">${esc(c.notes||'')}</textarea><span class="ex">Ex. : salle 2, 40 palox, couverture humide + plastique.</span></div>
+      <div class="field etabbox">
+        <span class="lab">${esc(L('Entreprise de cette chauffe','Empresa de esta calefacción'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></span>
+        <span class="hint">${esc(L("Apparaît en haut du registre de cette chauffe. Laisse vide pour utiliser l'établissement des Réglages","Aparece arriba del registro de esta calefacción. Déjalo vacío para usar el establecimiento de Ajustes"))}${S.etab.nom?' ('+esc(S.etab.nom)+')':''}.</span>
+        ${(()=>{ const k=knownEtabs(editing&&editing.id); return k.length?`<div class="field"><label for="f-epick">${esc(L('Reprendre une entreprise déjà utilisée','Usar una empresa ya registrada'))}</label><select id="f-epick"><option value="">${esc(L('Choisir…','Elegir…'))}</option>${k.map((e,i)=>`<option value="${i}">${esc(e.nom+(e.lieu?' · '+e.lieu:''))}</option>`).join('')}</select></div>`:''; })()}
+        <div class="field"><label for="f-enom">${esc(L("Nom de l'entreprise",'Nombre de la empresa'))}</label><input id="f-enom" type="text" value="${esc((c.etab&&c.etab.nom)||'')}" placeholder="${esc(L("Nom de l'entreprise",'Nombre de la empresa'))}"><span class="ex">${esc(L('Ex. : Vivero Richter, ou le client pour qui la chauffe est faite','Ej.: Vivero Richter, o el cliente para quien se hace la calefacción'))}</span></div>
+        <div class="field"><label for="f-elieu">${esc(L('Adresse ou commune','Dirección o comuna'))}</label><input id="f-elieu" type="text" value="${esc((c.etab&&c.etab.lieu)||'')}" placeholder="${esc(L('Adresse','Dirección'))}"><span class="ex">${esc(L('Ex. : Rancagua, Chili','Ej.: Rancagua, Chile'))}</span></div>
+        <div class="field"><label for="f-eagr">${esc(L("N° d'agrément ou d'enregistrement","N° de registro"))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="f-eagr" type="text" value="${esc((c.etab&&c.etab.agrement)||'')}" placeholder="N°"><span class="ex">${esc(L('Ex. : numéro SAG ou FranceAgriMer.','Ej.: número SAG.'))}</span></div>
+      </div>
       <div class="field seuilsbox">
         <span class="lab">Seuils d'alerte <span class="hint">(facultatif)</span></span>
         <span class="hint">L'app signale les relevés hors de ces valeurs. Demande les bonnes valeurs au responsable de la pépinière.</span>
@@ -1117,6 +1111,7 @@ function renderChauffeForm(){
     const idx=editLot?formLots.indexOf(editLot):-1;
     if(idx>=0) formLots[idx]=obj; else formLots.push(obj);
     const wasEdit=idx>=0; resetLotInputs(); $('f-st').textContent=wasEdit?'Lot modifié. Touche « Enregistrer » en bas pour garder les changements.':''; $('f-st').className='status'; drawLots(); if(!wasEdit) $('l-n').focus(); };
+  if($('f-epick')) $('f-epick').onchange=()=>{ const k=knownEtabs(editing&&editing.id); const e=k[Number($('f-epick').value)]; if(!e) return; $('f-enom').value=e.nom; $('f-elieu').value=e.lieu; $('f-eagr').value=e.agrement; };
   $('f-back').onclick=()=>{ renderChauffeForm._init=false; editing?go('chauffe',{tab:'infos'}):go('home'); };
   $('f-form').onsubmit=async e=>{ e.preventDefault(); const st=$('f-st');
     const nom=$('f-nom').value.trim(); const duree=Math.round(num($('f-duree').value)||0), de=Math.round(num($('f-de').value)||0), a=Math.round(num($('f-a').value)||0);
@@ -1131,7 +1126,7 @@ function renderChauffeForm(){
     if(sv.saut!=null && sv.saut<=0 || sv.rappel!=null && sv.rappel<=0){ st.textContent='La variation et le rappel doivent être plus grands que 0.'; st.className='status err'; return; }
     if($('l-n').value.trim()){ $('l-add').click(); }
     const ch = editing ? Object.assign({},editing) : {id:'ch-'+uid(), creeLe:nowIso(), creePar:S.me.nom};
-    Object.assign(ch,{nom, duree, finDe:de, finA:a, debut:$('f-debut').value||'', notes:$('f-notes').value.trim(), lots:formLots, seuils:sv});
+    Object.assign(ch,{nom, duree, finDe:de, finA:a, debut:$('f-debut').value||'', notes:$('f-notes').value.trim(), lots:formLots, seuils:sv, etab:{nom:$('f-enom').value.trim(), lieu:$('f-elieu').value.trim(), agrement:$('f-eagr').value.trim()}});
     await saveChauffe(ch); renderChauffeForm._init=false; toast(editing?'Chauffe enregistrée.':'Chauffe créée.');
     go('chauffe',{chauffeId:ch.id, tab:editing?'infos':'jour', jour:1}); };
   if(editing){
@@ -1142,6 +1137,14 @@ function renderChauffeForm(){
       renderChauffeForm._init=false; toast('Chauffe supprimée.'); go('home'); };
   }
 }
+
+
+/* ---------- Entreprise / établissement : propre à chaque chauffe, sinon celui des Réglages ---------- */
+function etabOf(ch){ const e=ch&&ch.etab; return (e && (e.nom||e.lieu||e.agrement)) ? {nom:e.nom||'', lieu:e.lieu||'', agrement:e.agrement||'', propre:true} : Object.assign({propre:false}, S.etab); }
+function etabForLot(lot){ try{ const st=(pSteps(lot.id)||[]).find(r=>r.chauffe); const ch=st&&S.chauffes.find(c=>c.id===st.chauffe&&!c.supprime); if(ch) return etabOf(ch); }catch(e){} return Object.assign({propre:false}, S.etab); }
+function etabHeadHTML(E){ return `<b>${esc(E.nom||L('Établissement non renseigné','Establecimiento sin indicar'))}</b>${E.lieu?'<br>'+esc(E.lieu):''}${E.agrement?'<br><span class="small">'+esc(L('N° d\'agrément / enregistrement : ','N° de registro: ')+E.agrement)+'</span>':''}`; }
+function knownEtabs(exceptId){ const m=new Map(); const add=e=>{ if(e&&e.nom){ const k=e.nom.trim().toLowerCase(); if(!m.has(k)) m.set(k,{nom:e.nom,lieu:e.lieu||'',agrement:e.agrement||''}); } };
+  add(S.etab); S.chauffes.filter(c=>!c.supprime&&c.id!==exceptId).forEach(c=>add(c.etab)); return Array.from(m.values()); }
 
 /* ---------- Réglages ---------- */
 function renderSettings(){
@@ -1159,8 +1162,8 @@ function renderSettings(){
       <p class="note">${esc(L("Change la langue de l'app sur ce téléphone. Les notes déjà écrites ne sont pas traduites.","Cambia el idioma de la app en este teléfono. Las notas ya escritas no se traducen."))}</p>
     </div>
     <div class="card">
-      <h3>${esc(L('Établissement','Establecimiento'))}</h3>
-      <p class="note">${esc(L('Affiché en haut du registre de traçabilité.','Aparece arriba del registro de trazabilidad.'))}</p>
+      <h3>${esc(L('Établissement par défaut','Establecimiento por defecto'))}</h3>
+      <p class="note">${esc(L("Utilisé pour les chauffes qui n'ont pas leur propre entreprise. Pour une chauffe faite pour une autre entreprise, renseigne-la dans « Modifier la chauffe ».",'Se usa para las calefacciones sin empresa propia. Para una calefacción hecha para otra empresa, indícala en « Modificar la calefacción ».'))}</p>
       <div class="field"><label for="s-enom">${esc(L('Nom de la pépinière','Nombre del vivero'))}</label><input id="s-enom" type="text" value="${esc(S.etab.nom)}" placeholder="${esc(L('Nom','Nombre'))}"><span class="ex">${esc(L('Ex. : Vivero Richter','Ej.: Vivero Richter'))}</span></div>
       <div class="field"><label for="s-elieu">${esc(L('Adresse ou commune','Dirección o comuna'))}</label><input id="s-elieu" type="text" value="${esc(S.etab.lieu)}" placeholder="${esc(L('Adresse','Dirección'))}"><span class="ex">${esc(L('Ex. : Rancagua, Chili','Ej.: Rancagua, Chile'))}</span></div>
       <div class="field"><label for="s-eagr">${esc(L("N° d'agrément ou d'enregistrement","N° de registro"))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="s-eagr" type="text" value="${esc(S.etab.agrement)}" placeholder="N°"><span class="ex">${esc(L('Ex. : numéro SAG ou FranceAgriMer.','Ej.: número SAG.'))}</span></div>
@@ -1206,12 +1209,12 @@ function renderChauffe(){
     <div class="endzone">${ch.debut?'Début le '+esc(dayLabel(ch,1))+' · ':''}fin de chauffe prévue entre J${ch.finDe} et J${ch.finA}</div>
     ${syncbarHTML()}
     <nav class="tabs" role="tablist">
-      ${[['jour','Saisie'],['hist','Suivi'],['lots','Par lot'],['bilan','Bilan'],['infos','Infos']].map(([k,l])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}
+      ${[['jour','Saisie'],['hist','Suivi'],['lots','Par lot'],['bilan',L('Triage','Selección')],['acc',L('Acclim.','Aclim.')],['infos','Infos']].map(([k,l])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}
     </nav></header>
   <section class="panel" id="c-body"></section>`;
   $('c-back').onclick=()=>go('home'); bindSyncbar();
   app.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; renderChauffe(); window.scrollTo({top:0}); });
-  ({jour:tabJour, hist:tabHist, lots:tabLots, bilan:tabBilan, infos:tabInfos}[S.tab]||tabJour)(ch, $('c-body'));
+  ({jour:tabJour, hist:tabHist, lots:tabLots, bilan:tabBilan, acc:tabAcclim, infos:tabInfos}[S.tab]||tabJour)(ch, $('c-body'));
 }
 
 function segHTML(id,key,val){ return `<div class="seg" id="${id}">`+OPTS[key].opts.map(o=>`<button type="button" data-v="${esc(o)}" class="${OPTS[key].alert.includes(o)?'alert':''}" aria-pressed="${val===o}">${esc(o)}</button>`).join('')+'</div>'; }
@@ -1250,9 +1253,10 @@ function tabJour(ch, body){
       <div class="field"><span class="lab">Photos</span><div class="photos" id="j-ph"></div><label class="ghost filebtn" for="j-phin">+ Ajouter une photo</label><input class="vh" id="j-phin" type="file" accept="image/*" multiple></div>
       <div class="field"><label for="j-rem">Action du jour / remarques</label><textarea id="j-rem" placeholder="Ce que tu as fait ou remarqué aujourd'hui">${esc(mine?mine.remarque||'':'')}</textarea><span class="ex">Ex. : mise en eau des palox, couverture réhumidifiée.</span></div>
       <div id="j-alert" class="alertbox" hidden></div>
+      <div class="field" id="j-raisonf" hidden><label for="j-raison">${esc(L('Raison du problème','Causa del problema'))} <span class="hint">${esc(L('(apparaît dans le registre PDF)','(aparece en el registro PDF)'))}</span></label><textarea id="j-raison" placeholder="${esc(L("Pourquoi c'est arrivé et ce qui a été fait",'Por qué pasó y qué se hizo'))}">${esc(mine?mine.raison||'':'')}</textarea><span class="ex">${esc(L('Ex. : chauffage coupé pendant la nuit, relancé à 7h ; porte de la chambre restée ouverte.','Ej.: calefacción apagada durante la noche, reactivada a las 7h; puerta de la cámara quedó abierta.'))}</span></div>
       <button class="primary" type="submit">Enregistrer la journée</button>
       <div class="status" id="j-st" role="status"></div>
-      ${others.length?`<div class="others"><span class="lab">Observations des collaborateurs</span>${others.map(o=>`<div><div class="who">${esc(authorName(o))}</div><div class="chips">${OBS_KEYS.filter(k=>o[k]).map(k=>`<span class="chip${OPTS[k].alert.includes(o[k])?' al':''}">${esc(OPTS[k].label+' : '+o[k])}</span>`).join('')}</div>${o.remarque?`<div class="rem">${esc(o.remarque)}</div>`:''}</div>`).join('')}</div>`:''}
+      ${others.length?`<div class="others"><span class="lab">Observations des collaborateurs</span>${others.map(o=>`<div><div class="who">${esc(authorName(o))}</div><div class="chips">${OBS_KEYS.filter(k=>o[k]).map(k=>`<span class="chip${OPTS[k].alert.includes(o[k])?' al':''}">${esc(OPTS[k].label+' : '+o[k])}</span>`).join('')}</div>${o.remarque?`<div class="rem">${esc(o.remarque)}</div>`:''}${o.raison?`<div class="rem"><b>${esc(L('Raison du problème : ','Causa del problema: '))}</b>${esc(o.raison)}</div>`:''}</div>`).join('')}</div>`:''}
     </form>
     ${phytoCardHTML(ch,J)}
     ${sensorCardHTML(ch)}`;
@@ -1291,16 +1295,17 @@ function tabJour(ch, body){
     catch(err){ stEl.textContent='Plus de place sur l\'appareil pour cette photo.'; stEl.className='status err'; } };
   // observations
   const tAl=dayTempAlerts(ch, dayStats(ch)[J-1]);
-  const showAlert=()=>{ const a=alertsOf(st).concat(tAl); const box=$('j-alert'); box.hidden=!a.length; box.innerHTML=a.length?'<strong>À signaler à '+esc(S.prevenir)+'</strong><span>'+a.map(esc).join(' · ')+'</span>':''; };
+  const showAlert=()=>{ const a=alertsOf(st).concat(tAl); const box=$('j-alert'); box.hidden=!a.length; box.innerHTML=a.length?'<strong>À signaler à '+esc(S.prevenir)+'</strong><span>'+a.map(esc).join(' · ')+'</span>':''; $('j-raisonf').hidden=!a.length && !$('j-raison').value.trim(); };
   const ss=$('j-setseuils'); if(ss) ss.onclick=()=>{ renderChauffeForm._init=false; go('edit'); setTimeout(()=>{ const f=$('f-min'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },50); };
   OBS_KEYS.forEach(k=>bindSeg('seg-'+k,k,st,()=>{ dirty=true; showAlert(); })); showAlert();
   $('j-rem').oninput=()=>{ dirty=true; };
+  $('j-raison').oninput=()=>{ dirty=true; };
   async function saveObs(silent){
-    const rem=$('j-rem').value.trim(); const hasAny=OBS_KEYS.some(k=>st[k])||rem;
+    const rem=$('j-rem').value.trim(), raison=$('j-raison').value.trim(); const hasAny=OBS_KEYS.some(k=>st[k])||rem||raison;
     const ex=myObs(ch.id,J);
     if(!hasAny && !ex) return true;
     const e=Object.assign({}, ex||{id:'obs:'+ch.id+':'+J+':'+S.me.id, type:'obs', chauffeId:ch.id, jour:J, auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()});
-    OBS_KEYS.forEach(k=>e[k]=st[k]||''); e.remarque=rem; e.auteurNom=S.me.nom; delete e.supprime;
+    OBS_KEYS.forEach(k=>e[k]=st[k]||''); e.remarque=rem; e.raison=raison; e.auteurNom=S.me.nom; delete e.supprime;
     await saveEntry(e); dirty=false; return true;
   }
   const pending=()=>{ const te=num($('j-ext').value), ti=num($('j-int').value), he=num($('j-hext').value), hi=num($('j-hint').value), oe=num($('j-oext').value), oi=num($('j-oint').value); return (te==null&&ti==null&&he==null&&hi==null&&oe==null&&oi==null)?null:{tExt:te,tInt:ti,humExt:he,humInt:hi,o2Ext:oe,o2Int:oi}; };
@@ -1470,6 +1475,206 @@ function tabLots(ch, body){
     el.appendChild(d); });
 }
 
+/* ----- Après chauffe : acclimatation ----- */
+const ACC_ACTIONS=[['arrosage','Arrosage','Riego'],['brume','Brumisation','Nebulización'],['ombre+','Ombrage posé','Sombra puesta'],['ombre-','Ombrage retiré','Sombra retirada'],['aer+','Aération ouverte','Ventilación abierta'],['aer-','Aération fermée','Ventilación cerrada']];
+const ACC_ETAT={
+  pousses:{fr:'Pousses',es:'Brotes',opts:[['fermes','Fermes','Firmes'],['molles','Molles, flétries','Blandos, marchitos'],['brulees','Brûlées','Quemados']],alert:['molles','brulees']},
+  feuilles:{fr:'Feuilles',es:'Hojas',opts:[['vertes','Vertes','Verdes'],['jaunes','Jaunissent','Amarillean'],['seches','Sèches','Secas']],alert:['jaunes','seches']}
+};
+const ACC_KEYS=Object.keys(ACC_ETAT);
+const accActLabel=k=>{ const a=ACC_ACTIONS.find(x=>x[0]===k); return a?L(a[1],a[2]):k; };
+const accOptLabel=(key,v)=>{ const o=ACC_ETAT[key].opts.find(x=>x[0]===v); return o?L(o[1],o[2]):v; };
+const accOf=ch=>Object.assign({lieu:'',debut:'',duree:21,tMin:null,tMax:null,hMin:null,fin:''}, ch.acclim||{});
+const accOn=ch=>!!accOf(ch).debut;
+const accCh=ch=>({debut:accOf(ch).debut});
+function accDur(ch){ const a=accOf(ch); return Math.max(1, Math.min(120, Number(a.duree)||21)); }
+function accToday(ch){ const a=accOf(ch); if(!a.debut) return 1; const d0=new Date(a.debut+'T12:00:00'), n=new Date(); n.setHours(12,0,0,0); const k=Math.round((n-d0)/864e5)+1; return Math.max(1,Math.min(accDur(ch),k)); }
+const accRels=(cid,A)=>entriesOf(cid,'accrel').filter(e=>A==null||e.ajour===A).sort((a,b)=>(a.ajour-b.ajour)||(a.heure||'').localeCompare(b.heure||''));
+const accObsDay=(cid,A)=>entriesOf(cid,'accobs').filter(e=>e.ajour===A);
+const accMyObs=(cid,A)=>accObsDay(cid,A).find(isMine);
+const accObsAlerts=o=>ACC_KEYS.filter(k=>o[k] && ACC_ETAT[k].alert.includes(o[k])).map(k=>L(ACC_ETAT[k].fr,ACC_ETAT[k].es)+L(' : ',': ')+accOptLabel(k,o[k]));
+function accDayStat(ch,A){ const rs=accRels(ch.id,A), ts=rs.map(r=>r.t).filter(v=>v!=null), hs=rs.map(r=>r.hum).filter(v=>v!=null);
+  return {A, n:rs.length, tMin:ts.length?Math.min(...ts):null, tMax:ts.length?Math.max(...ts):null, hMin:hs.length?Math.min(...hs):null, hMax:hs.length?Math.max(...hs):null}; }
+function accTempAlerts(ch,d){ const a=accOf(ch), out=[];
+  if(a.tMin!=null && d.tMin!=null && d.tMin<a.tMin) out.push(L('Trop froid : ','Demasiado frío: ')+fmtN(d.tMin)+' °C ('+L('min. ','mín. ')+fmtN(a.tMin)+' °C)');
+  if(a.tMax!=null && d.tMax!=null && d.tMax>a.tMax) out.push(L('Trop chaud : ','Demasiado calor: ')+fmtN(d.tMax)+' °C ('+L('max. ','máx. ')+fmtN(a.tMax)+' °C)');
+  if(a.hMin!=null && d.hMin!=null && d.hMin<a.hMin) out.push(L('Air trop sec : ','Aire demasiado seco: ')+fmtN(d.hMin)+' % ('+L('min. ','mín. ')+fmtN(a.hMin)+' %)');
+  return out; }
+function accDayAlerts(ch,A){ return accTempAlerts(ch,accDayStat(ch,A)).concat(...accObsDay(ch.id,A).map(accObsAlerts)); }
+function accDayFilled(ch,A){ return accRels(ch.id,A).length>0 || accObsDay(ch.id,A).length>0 || entriesOf(ch.id,'reprise').some(e=>e.ajour===A); }
+function accRelOut(ch,r){ const a=accOf(ch); return (r.t!=null && ((a.tMin!=null&&r.t<a.tMin)||(a.tMax!=null&&r.t>a.tMax))) || (r.hum!=null && a.hMin!=null && r.hum<a.hMin); }
+/* Reprise : dernier contrôle de chaque lot (plants regardés / plants morts). */
+function repriseByLot(ch){ const m={};
+  entriesOf(ch.id,'reprise').slice().sort((a,b)=>(a.ajour-b.ajour)||(a.creeLe||'').localeCompare(b.creeLe||'')).forEach(e=>{ m[String(e.lot)]=e; });
+  return m; }
+const repriseRate=e=>e&&e.regardes>0&&e.morts!=null?Math.max(0,Math.min(1,(e.regardes-e.morts)/e.regardes)):null;
+function accSeuilsText(ch){ const a=accOf(ch), p=[]; if(a.tMin!=null) p.push(L('T° min. ','T° mín. ')+fmtN(a.tMin)+' °C'); if(a.tMax!=null) p.push(L('T° max. ','T° máx. ')+fmtN(a.tMax)+' °C'); if(a.hMin!=null) p.push(L('HR min. ','HR mín. ')+fmtN(a.hMin)+' %'); return p.join(' · '); }
+
+function tabAcclim(ch, body){
+  const a=accOf(ch); const lots=ch.lots||[];
+  const editSet=S.accEdit===ch.id || !a.debut;
+  if(S.ajour==null || S.ajourCh!==ch.id){ S.ajour=accToday(ch); S.ajourCh=ch.id; }
+  if(S.ajour>accDur(ch)) S.ajour=accDur(ch);
+  const A=S.ajour;
+  const setHTML=`<form class="card" id="a-set" autocomplete="off">
+      <h3>${esc(L("Mise en place de l'acclimatation","Inicio de la aclimatación"))}</h3>
+      <p class="note">${esc(L("Les lots, variétés et porte-greffes sont repris de la chauffe : rien à ressaisir.","Los lotes, variedades y portainjertos vienen de la calefacción: nada que volver a ingresar."))}</p>
+      <div class="field"><label for="a-lieu">${esc(L('Lieu','Lugar'))}</label><input id="a-lieu" type="text" value="${esc(a.lieu)}" placeholder="${esc(L("Endroit où sont les plants","Lugar donde están las plantas"))}"><span class="ex">${esc(L('Ex. : tunnel 2, serre, ombrière, plein champ.','Ej.: túnel 2, invernadero, malla sombra, campo.'))}</span></div>
+      <div class="two"><div class="field"><label for="a-debut">${esc(L('Date de début','Fecha de inicio'))}</label><input id="a-debut" type="date" value="${esc(a.debut||ch.sortie||'')}"></div>
+      <div class="field"><label for="a-duree">${esc(L('Durée prévue (jours)','Duración prevista (días)'))}</label><input id="a-duree" class="num" type="text" inputmode="numeric" value="${esc(a.duree)}"></div></div>
+      <span class="ex">${esc(L("La date de début est proposée à partir de la date de sortie de chauffe (onglet Triage).","La fecha de inicio se propone a partir de la fecha de salida de la calefacción (pestaña Selección)."))}</span>
+      <span class="lab">${esc(L("Seuils d'alerte","Umbrales de alerta"))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></span>
+      <div class="three"><div class="field"><label for="a-tmin">${esc(L('T° min. (°C)','T° mín. (°C)'))}</label><input id="a-tmin" class="num" type="text" inputmode="decimal" value="${a.tMin!=null?esc(fmtN(a.tMin)):''}"></div>
+      <div class="field"><label for="a-tmax">${esc(L('T° max. (°C)','T° máx. (°C)'))}</label><input id="a-tmax" class="num" type="text" inputmode="decimal" value="${a.tMax!=null?esc(fmtN(a.tMax)):''}"></div>
+      <div class="field"><label for="a-hmin">${esc(L('HR min. (%)','HR mín. (%)'))}</label><input id="a-hmin" class="num" type="text" inputmode="decimal" value="${a.hMin!=null?esc(fmtN(a.hMin)):''}"></div></div>
+      <span class="ex">${esc(L("Ex. : T° min. 10, T° max. 32, HR min. 60. Laisse vide si tu ne veux pas d'alerte.","Ej.: T° mín. 10, T° máx. 32, HR mín. 60. Deja vacío si no quieres alerta."))}</span>
+      <div class="field"><label for="a-fin">${esc(L('Fin : plantation en pépinière ou mise en jauge','Fin: plantación en vivero o puesta en zanja'))} <span class="hint">${esc(L('(à remplir à la fin)','(llenar al final)'))}</span></label><input id="a-fin" type="date" value="${esc(a.fin||'')}"></div>
+      <div class="row"><button class="primary" type="submit">${esc(a.debut?L('Enregistrer','Guardar'):L("Commencer l'acclimatation","Empezar la aclimatación"))}</button>${a.debut?`<button class="ghost" type="button" id="a-setx">${esc(L('Annuler','Cancelar'))}</button>`:''}</div>
+      <div class="status" id="a-setst"></div>
+    </form>`;
+  if(!a.debut){
+    body.innerHTML=`<p class="note">${esc(L("Après la sortie de chauffe, les plants passent par une période d'acclimatation (endurcissement) avant la plantation. Note ici les conditions, les arrosages et l'état des plants, jour par jour, puis la reprise de chaque lot. Tout apparaît dans le registre PDF à la suite de la chauffe.","Después de la salida de la calefacción, las plantas pasan por un período de aclimatación (endurecimiento) antes de la plantación. Anota aquí las condiciones, los riegos y el estado de las plantas, día por día, y luego el prendimiento de cada lote. Todo aparece en el registro PDF a continuación de la calefacción."))}</p>${setHTML}`;
+    bindAccSet(ch); return;
+  }
+  const mine=accMyObs(ch.id,A)||{}; const acts=new Set(mine.actions||[]); const st={}; ACC_KEYS.forEach(k=>st[k]=mine[k]||'');
+  const rels=accRels(ch.id,A); const others=accObsDay(ch.id,A).filter(o=>!isMine(o));
+  const rep=repriseByLot(ch); const lw=lotsWithBilan(ch);
+  const repList=entriesOf(ch.id,'reprise').slice().sort((x,y)=>(y.ajour-x.ajour)||(y.creeLe||'').localeCompare(x.creeLe||''));
+  const fin=a.debut?accCh(ch):null;
+  body.innerHTML=`
+    ${editSet?setHTML:`<div class="card" style="gap:6px"><div class="hhead"><h3>${esc(L('Acclimatation','Aclimatación'))}${a.lieu?' · '+esc(a.lieu):''}</h3><button class="linkbtn" type="button" id="a-edit">${esc(L('Modifier','Modificar'))}</button></div>
+      <div class="rem">${esc(L('Du ','Del ')+dayLabel(fin,1)+L(' · prévu ',' · previsto ')+plural(accDur(ch),'jour','jours','día','días'))}${a.fin?' · '+esc(L('fin le ','fin el ')+a.fin.split('-').reverse().join('/')):''}</div>
+      ${accSeuilsText(ch)?`<div class="seuilsline">${esc(accSeuilsText(ch))}</div>`:''}</div>`}
+    <div class="field"><span class="lab">${esc(L('Jour','Día'))}</span><div class="dates" id="a-dates"></div></div>
+    <form class="card" id="a-form" autocomplete="off">
+      <div class="hhead"><h3>A${A} · ${esc(dayLabel(fin,A))}</h3></div>
+      <div class="field">
+        <span class="lab">${esc(L('Relevés','Lecturas'))}</span>
+        <div class="list" id="a-rels"></div>
+        <div class="field"><label for="a-h">${esc(L('Heure du relevé','Hora de la lectura'))}</label><input id="a-h" type="time" value="${hhmm()}"></div>
+        <div class="two">
+        <div class="field"><label for="a-t">${esc(L('Température (°C)','Temperatura (°C)'))}</label><input id="a-t" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
+        <div class="field"><label for="a-hum">${esc(L('Humidité (%)','Humedad (%)'))}</label><input id="a-hum" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="%"></div></div>
+        <span class="ex">${esc(L("Ex. : 15h · 27 °C · 65 %. Une seule valeur suffit.","Ej.: 15h · 27 °C · 65 %. Basta con un valor."))}</span>
+        <button class="primary" id="a-addrel" type="button">${esc(L('+ Ajouter ce relevé','+ Agregar esta lectura'))}</button>
+      </div>
+      <div class="field"><span class="lab">${esc(L('Actions du jour','Acciones del día'))} <span class="hint">${esc(L('(plusieurs possibles)','(varias posibles)'))}</span></span><div class="seg" id="a-acts">${ACC_ACTIONS.map(x=>`<button type="button" data-v="${esc(x[0])}" aria-pressed="${acts.has(x[0])}">${esc(L(x[1],x[2]))}</button>`).join('')}</div></div>
+      ${ACC_KEYS.map(k=>`<div class="field"><span class="lab">${esc(L(ACC_ETAT[k].fr,ACC_ETAT[k].es))}</span><div class="seg" id="aseg-${k}">${ACC_ETAT[k].opts.map(o=>`<button type="button" data-v="${esc(o[0])}" class="${ACC_ETAT[k].alert.includes(o[0])?'alert':''}" aria-pressed="${st[k]===o[0]}">${esc(L(o[1],o[2]))}</button>`).join('')}</div></div>`).join('')}
+      <div class="field"><label for="a-rem">${esc(L('Remarques','Observaciones'))}</label><textarea id="a-rem" placeholder="${esc(L("Ce que tu as fait ou remarqué aujourd'hui","Lo que hiciste o notaste hoy"))}">${esc(mine.remarque||'')}</textarea><span class="ex">${esc(L('Ex. : ombrière ouverte le matin, arrosage 10 min à 17h.','Ej.: malla sombra abierta en la mañana, riego 10 min a las 17h.'))}</span></div>
+      <div id="a-alert" class="alertbox" hidden></div>
+      <div class="field" id="a-raisonf" hidden><label for="a-raison">${esc(L('Raison du problème','Causa del problema'))} <span class="hint">${esc(L('(apparaît dans le registre PDF)','(aparece en el registro PDF)'))}</span></label><textarea id="a-raison" placeholder="${esc(L("Pourquoi c'est arrivé et ce qui a été fait","Por qué pasó y qué se hizo"))}">${esc(mine.raison||'')}</textarea><span class="ex">${esc(L("Ex. : ombrière retirée trop tôt, coup de soleil l'après-midi ; ombrage remis.","Ej.: malla sombra retirada muy pronto, golpe de sol en la tarde; sombra puesta de nuevo."))}</span></div>
+      <button class="primary" type="submit">${esc(L('Enregistrer la journée','Guardar el día'))}</button>
+      <div class="status" id="a-st" role="status"></div>
+      ${others.length?`<div class="others"><span class="lab">${esc(L('Observations des collaborateurs','Observaciones de los colaboradores'))}</span>${others.map(o=>`<div><div class="who">${esc(authorName(o))}</div><div class="chips">${(o.actions||[]).map(k=>`<span class="chip">${esc(accActLabel(k))}</span>`).join('')}${ACC_KEYS.filter(k=>o[k]).map(k=>`<span class="chip${ACC_ETAT[k].alert.includes(o[k])?' al':''}">${esc(L(ACC_ETAT[k].fr,ACC_ETAT[k].es)+' : '+accOptLabel(k,o[k]))}</span>`).join('')}</div>${o.remarque?`<div class="rem">${esc(o.remarque)}</div>`:''}${o.raison?`<div class="rem"><b>${esc(L('Raison du problème : ','Causa del problema: '))}</b>${esc(o.raison)}</div>`:''}</div>`).join('')}</div>`:''}
+    </form>
+    <form class="card" id="r-form" autocomplete="off">
+      <h3>${esc(L('Contrôle de reprise par lot','Control de prendimiento por lote'))}</h3>
+      <p class="note">${esc(L("Compte les plants morts sur un échantillon du lot (ou le lot entier). Le dernier contrôle de chaque lot donne sa reprise.","Cuenta las plantas muertas en una muestra del lote (o el lote entero). El último control de cada lote da su prendimiento."))}</p>
+      <div class="field"><label for="r-lot">${esc(L('N° de lot','N° de lote'))}</label><input id="r-lot" type="text" inputmode="numeric" list="r-lotsref" placeholder="${esc(L('Numéro','Número'))}"><datalist id="r-lotsref">${lots.map(l=>`<option value="${esc(l.lot)}">${esc(L('Lot ','Lote ')+l.lot+' · '+[l.variete,l.pg].filter(Boolean).join(' / '))}</option>`).join('')}</datalist><span class="ex" id="r-lotinfo">${esc(L('Variété et porte-greffe sont repris de la chauffe.','Variedad y portainjerto vienen de la calefacción.'))}</span></div>
+      <div class="two"><div class="field"><label for="r-reg">${esc(L('Plants regardés','Plantas revisadas'))}</label><input id="r-reg" class="num" type="text" inputmode="numeric" placeholder="N°"></div>
+      <div class="field"><label for="r-morts">${esc(L('Plants morts','Plantas muertas'))}</label><input id="r-morts" class="num" type="text" inputmode="numeric" placeholder="N°"></div></div>
+      <span class="ex">${esc(L('Ex. : 100 regardés, 4 morts → reprise 96 %.','Ej.: 100 revisadas, 4 muertas → prendimiento 96 %.'))}</span>
+      <div class="field"><label for="r-rem">${esc(L('Remarques','Observaciones'))}</label><input id="r-rem" type="text" placeholder="${esc(L('Ce que tu as remarqué sur ce lot','Lo que notaste en este lote'))}"></div>
+      <button class="primary" type="submit">${esc(L('Ajouter ce contrôle','Agregar este control'))}</button>
+      <div class="status" id="r-st"></div>
+    </form>
+    ${lw.length?`<div class="card" style="gap:8px"><h3>${esc(L('Résumé par lot','Resumen por lote'))}</h3><div class="scrollx"><table class="mini"><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Triage','Selección'))}</th><th>${esc(L('Reprise','Prendimiento'))}</th></tr></thead><tbody>${lw.map(l=>{ const e=rep[l.lot]; return `<tr><td>${esc(l.lot)}${l.variete||l.pg?' <span class="small">'+esc([l.variete,l.pg].filter(Boolean).join('/'))+'</span>':''}</td><td>${l.b?pct(bilanRate(l.b)):'—'}</td><td>${e?pct(repriseRate(e))+' <span class="small">(A'+e.ajour+')</span>':'—'}</td></tr>`; }).join('')}</tbody></table></div></div>`:''}
+    <div class="list" id="r-list"></div>`;
+  if(editSet) bindAccSet(ch); else $('a-edit').onclick=()=>{ S.accEdit=ch.id; renderChauffe(); };
+  // jours
+  const dEl=$('a-dates');
+  for(let j=1;j<=accDur(ch);j++){ const b=document.createElement('button'); b.type='button';
+    b.innerHTML='<small>A'+j+'</small>'+esc(dayShort(fin,j));
+    if(accDayFilled(ch,j)) b.classList.add('done'); b.setAttribute('aria-pressed',j===A);
+    b.onclick=()=>{ S.ajour=j; renderChauffe(); }; dEl.appendChild(b); }
+  const cur=dEl.querySelector('[aria-pressed="true"]'); if(cur) cur.scrollIntoView({inline:'center',block:'nearest'});
+  // relevés
+  const relEl=$('a-rels');
+  if(!rels.length) relEl.innerHTML=`<div class="rel none">${esc(L('Aucun relevé pour ce jour.','Ninguna lectura para este día.'))}</div>`;
+  rels.forEach(r=>{ const d=document.createElement('div'); const o=accRelOut(ch,r); d.className='rel'+(o?' out':''); const s=document.createElement('span');
+    s.innerHTML=(o?'⚠ ':'')+esc([r.heure?fmtH(r.heure):L('heure ?','hora ?'), r.t!=null?fmtN(r.t)+' °C':null, r.hum!=null?fmtN(r.hum)+' %':null].filter(Boolean).join(' · '))+(isMine(r)?'':'<small>'+esc(authorName(r))+'</small>');
+    d.appendChild(s);
+    if(isMine(r)){ const b=document.createElement('button'); b.type='button'; b.textContent=L('Retirer','Quitar'); b.onclick=async()=>{ await removeEntry(r); toast(L('Relevé retiré.','Lectura quitada.')); renderChauffe(); }; d.appendChild(b); }
+    relEl.appendChild(d); });
+  let dirty=false;
+  $('a-acts').querySelectorAll('button').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; if(acts.has(v)) acts.delete(v); else acts.add(v); b.setAttribute('aria-pressed',acts.has(v)); dirty=true; });
+  const tAl=accTempAlerts(ch,accDayStat(ch,A));
+  const showAlert=()=>{ const al=accObsAlerts(st).concat(tAl); const box=$('a-alert'); box.hidden=!al.length; box.innerHTML=al.length?'<strong>'+esc(L('À signaler à ','Avisar a ')+S.prevenir)+'</strong><span>'+al.map(esc).join(' · ')+'</span>':''; $('a-raisonf').hidden=!al.length && !$('a-raison').value.trim(); };
+  ACC_KEYS.forEach(k=>{ const el=$('aseg-'+k); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ st[k]=st[k]===b.dataset.v?'':b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st[k])); dirty=true; showAlert(); }); });
+  showAlert();
+  $('a-rem').oninput=()=>{ dirty=true; }; $('a-raison').oninput=()=>{ dirty=true; };
+  async function saveObs(){
+    const rem=$('a-rem').value.trim(), raison=$('a-raison').value.trim(); const ex=accMyObs(ch.id,A);
+    const hasAny=acts.size||ACC_KEYS.some(k=>st[k])||rem||raison; if(!hasAny && !ex) return;
+    const e=Object.assign({}, ex||{id:'accobs:'+ch.id+':'+A+':'+S.me.id, type:'accobs', chauffeId:ch.id, ajour:A, auteurId:S.me.id, creeLe:nowIso()});
+    e.actions=[...acts]; ACC_KEYS.forEach(k=>e[k]=st[k]||''); e.remarque=rem; e.raison=raison; e.auteurNom=S.me.nom; delete e.supprime;
+    await saveEntry(e); dirty=false; }
+  const pending=()=>{ const t=num($('a-t').value), h=num($('a-hum').value); return (t==null&&h==null)?null:{t,hum:h}; };
+  async function addRel(){ const stEl=$('a-st'); const p=pending();
+    if(!p){ stEl.textContent=($('a-t').value||$('a-hum').value)?L('Valeur illisible : tape seulement le nombre, par exemple 28 ou 28,5.','Valor ilegible: escribe solo el número, por ejemplo 28 o 28,5.'):L('Indique au moins une valeur.','Indica al menos un valor.'); stEl.className='status err'; return; }
+    if(p.hum!=null && (p.hum<0||p.hum>100)){ stEl.textContent=L("L'humidité doit être entre 0 et 100 %.",'La humedad debe estar entre 0 y 100 %.'); stEl.className='status err'; return; }
+    try{ const ent={id:uid(), type:'accrel', chauffeId:ch.id, ajour:A, heure:$('a-h').value||'', t:p.t, hum:p.hum, auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()};
+      await saveEntry(ent); if(dirty) await saveObs();
+      toast(accRelOut(ch,ent)?L('⚠ Hors seuil : relevé enregistré.','⚠ Fuera de umbral: lectura guardada.'):L('Relevé enregistré.','Lectura guardada.')); renderChauffe(); }
+    catch(err){ stEl.textContent=L('Enregistrement impossible : stockage plein ou bloqué.','No se pudo guardar: almacenamiento lleno o bloqueado.'); stEl.className='status err'; } }
+  $('a-addrel').onclick=addRel;
+  ['a-t','a-hum','a-h'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addRel(); } }));
+  $('a-form').onsubmit=async e=>{ e.preventDefault(); if(pending()) return addRel();
+    try{ await saveObs(); toast(L('Journée enregistrée.','Día guardado.')); renderChauffe(); }catch(err){ $('a-st').textContent=L('Enregistrement impossible.','No se pudo guardar.'); $('a-st').className='status err'; } };
+  // reprise
+  $('r-lot').oninput=()=>{ const l=lots.find(x=>String(x.lot)===$('r-lot').value.trim()); $('r-lotinfo').textContent=l?L('Lot ','Lote ')+l.lot+' · '+([l.variete,l.pg].filter(Boolean).join(' / ')||'—'):L('Variété et porte-greffe sont repris de la chauffe.','Variedad y portainjerto vienen de la calefacción.'); };
+  $('r-form').onsubmit=async e=>{ e.preventDefault(); const stEl=$('r-st'); const lot=$('r-lot').value.trim(), reg=num($('r-reg').value), mo=num($('r-morts').value);
+    if(!lot){ stEl.textContent=L('Indique le numéro du lot.','Indica el número del lote.'); stEl.className='status err'; $('r-lot').focus(); return; }
+    if(!(reg>0)){ stEl.textContent=L('Indique le nombre de plants regardés.','Indica el número de plantas revisadas.'); stEl.className='status err'; return; }
+    if(mo==null||mo<0){ stEl.textContent=L('Indique le nombre de plants morts (0 si aucun).','Indica el número de plantas muertas (0 si ninguna).'); stEl.className='status err'; return; }
+    if(mo>reg){ stEl.textContent=L('Il ne peut pas y avoir plus de plants morts que de plants regardés.','No puede haber más plantas muertas que revisadas.'); stEl.className='status err'; return; }
+    const l=lots.find(x=>String(x.lot)===lot)||{}; const bl=bilanOf(ch.id,lot)||{};
+    const ent={id:uid(), type:'reprise', chauffeId:ch.id, ajour:A, lot, variete:l.variete||bl.variete||'', pg:l.pg||bl.pg||'', regardes:Math.round(reg), morts:Math.round(mo), remarque:$('r-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()};
+    try{ await saveEntry(ent); toast(L('Lot ','Lote ')+lot+L(' : reprise ',': prendimiento ')+pct(repriseRate(ent))+'.'); renderChauffe(); }catch(err){ stEl.textContent=L('Enregistrement impossible.','No se pudo guardar.'); stEl.className='status err'; } };
+  const rl=$('r-list');
+  repList.forEach(r=>{ const d=document.createElement('div'); d.className='item';
+    d.innerHTML=`<div class="hhead"><span class="d">${esc(L('Lot ','Lote ')+r.lot)}${r.variete||r.pg?' · '+esc([r.variete,r.pg].filter(Boolean).join(' / ')):''}</span><span class="mono">A${r.ajour} · ${esc(dayShort(fin,r.ajour))}</span></div>
+      <div class="raterow">${rateBar(repriseRate(r))}<span class="rv mono">${pct(repriseRate(r))}</span></div>
+      <div class="rem">${esc(plural(r.morts,'mort','morts','muerta','muertas')+L(' sur ',' de ')+plural(r.regardes,'regardé','regardés','revisada','revisadas'))}${r.remarque?' · '+esc(r.remarque):''}</div><div class="who">${esc(authorName(r))}</div>`;
+    if(isMine(r)){ const del=document.createElement('button'); del.type='button'; del.className='ghost'; del.textContent=L('Supprimer','Eliminar'); let c=false;
+      del.onclick=async()=>{ if(!c){ c=true; del.textContent=L('Toucher encore pour supprimer','Tocar otra vez para eliminar'); del.classList.add('danger'); return; } await removeEntry(r); toast(L('Contrôle supprimé.','Control eliminado.')); renderChauffe(); };
+      d.appendChild(del); }
+    rl.appendChild(d); });
+}
+function bindAccSet(ch){
+  if($('a-setx')) $('a-setx').onclick=()=>{ S.accEdit=null; renderChauffe(); };
+  $('a-set').onsubmit=async e=>{ e.preventDefault(); const stEl=$('a-setst');
+    const debut=$('a-debut').value||''; if(!debut){ stEl.textContent=L('Indique la date de début.','Indica la fecha de inicio.'); stEl.className='status err'; $('a-debut').focus(); return; }
+    const duree=Math.round(num($('a-duree').value)||0); if(!(duree>=1&&duree<=120)){ stEl.textContent=L('Indique une durée entre 1 et 120 jours.','Indica una duración entre 1 y 120 días.'); stEl.className='status err'; return; }
+    const tMin=num($('a-tmin').value), tMax=num($('a-tmax').value), hMin=num($('a-hmin').value);
+    if(tMin!=null&&tMax!=null&&tMin>=tMax){ stEl.textContent=L('La T° min. doit être plus basse que la T° max.','La T° mín. debe ser más baja que la T° máx.'); stEl.className='status err'; return; }
+    const first=!accOn(ch);
+    await saveChauffe(Object.assign({}, ch, {acclim:{lieu:$('a-lieu').value.trim(), debut, duree, tMin, tMax, hMin, fin:$('a-fin').value||''}}));
+    S.accEdit=null; if(first){ S.ajourCh=null; } toast(first?L('Acclimatation commencée.','Aclimatación iniciada.'):L('Acclimatation enregistrée.','Aclimatación guardada.')); renderChauffe(); };
+}
+function accRegistreHTML(ch, num){
+  const a=accOf(ch); const hasData=entriesOf(ch.id).some(e=>e.type==='accrel'||e.type==='accobs'||e.type==='reprise');
+  if(!a.debut && !hasData) return '';
+  const fin=accCh(ch); const n=accDur(ch);
+  const days=[]; for(let j=1;j<=n;j++) if(accDayFilled(ch,j)) days.push(j);
+  entriesOf(ch.id).forEach(e=>{ if((e.type==='accrel'||e.type==='accobs'||e.type==='reprise') && e.ajour>n && !days.includes(e.ajour)) days.push(e.ajour); });
+  const rng=(x,y)=>x==null?'—':(x===y?fmtN(x):fmtN(x)+'–'+fmtN(y));
+  const rep=repriseByLot(ch); const lw=lotsWithBilan(ch);
+  Object.keys(rep).forEach(k=>{ if(!lw.some(l=>l.lot===k)) lw.push({lot:k, variete:rep[k].variete, pg:rep[k].pg, b:null}); });
+  const rows=lw.filter(l=>rep[l.lot]);
+  return `<section><h3>${esc((num||6)+'. '+L('Acclimatation (après chauffe)','Aclimatación (después de la calefacción)'))}</h3><dl>
+      <dt>${esc(L('Lieu','Lugar'))}</dt><dd>${esc(a.lieu||'—')}</dd>
+      <dt>${esc(L('Période','Período'))}</dt><dd>${a.debut?esc(a.debut.split('-').reverse().join('/'))+(a.fin?esc(L(' au ',' al ')+a.fin.split('-').reverse().join('/')):esc(L(' · prévu ',' · previsto ')+plural(n,'jour','jours','día','días'))):'—'}</dd>
+      <dt>${esc(L('Seuils','Umbrales'))}</dt><dd>${esc(accSeuilsText(ch)||'—')}</dd>
+    </dl>
+    ${days.length?`<div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° (°C)','T° (°C)'))}</th><th>${esc(L('HR (%)','HR (%)'))}</th><th>${esc(L('Actions','Acciones'))}</th><th>${esc(L('État des plants','Estado de las plantas'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${days.map(j=>{ const d=accDayStat(ch,j), os=accObsDay(ch.id,j), al=accDayAlerts(ch,j);
+      const acts=[...new Set([].concat(...os.map(o=>o.actions||[])))].map(accActLabel);
+      const etat=os.map(o=>[ACC_KEYS.filter(k=>o[k]).map(k=>L(ACC_ETAT[k].fr,ACC_ETAT[k].es)+' : '+accOptLabel(k,o[k])).join(' · '), o.remarque].filter(Boolean).join(' — ')+(o.remarque||ACC_KEYS.some(k=>o[k])?' ('+authorName(o)+')':'')).filter(x=>x.trim());
+      return `<tr><td>A${j}</td><td>${esc(dayShort(fin,j))}</td><td${accTempAlerts(ch,d).some(x=>/°C/.test(x))?' class="al"':''}>${rng(d.tMin,d.tMax)}</td><td>${rng(d.hMin,d.hMax)}</td><td>${esc(acts.join(', '))}</td><td>${etat.map(esc).join('<br>')}</td><td class="al">${al.map(esc).join('<br>')}${os.filter(o=>o.raison).map(o=>'<br><span class="why"><b>'+esc(L('Raison : ','Causa: '))+'</b>'+esc(o.raison)+'</span>').join('')}</td></tr>`; }).join('')}</tbody></table></div>`:`<p class="small">${esc(L('Aucune saisie pour l\'instant.','Ningún registro por ahora.'))}</p>`}
+    ${rows.length?`<h3 style="margin-top:12px">${esc(L('Reprise par lot','Prendimiento por lote'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Réussite au triage','Éxito en la selección'))}</th><th>${esc(L('Plants regardés','Plantas revisadas'))}</th><th>${esc(L('Morts','Muertas'))}</th><th>${esc(L('Reprise','Prendimiento'))}</th><th>${esc(L('Contrôle','Control'))}</th></tr></thead><tbody>${rows.map(l=>{ const e=rep[l.lot]; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete||e.variete||'')}</td><td>${esc(l.pg||e.pg||'')}</td><td>${l.b?pct(bilanRate(l.b)):'—'}</td><td>${esc(e.regardes)}</td><td>${esc(e.morts)}</td><td><b>${pct(repriseRate(e))}</b></td><td>A${e.ajour}${e.remarque?' · '+esc(e.remarque):''}</td></tr>`; }).join('')}</tbody></table></div>`:''}
+  </section>`;
+}
+
 /* ----- Onglet Infos (chauffe, lots, protocole, soudure) ----- */
 function tabInfos(ch, body){
   const lots=ch.lots||[]; const tq=lots.reduce((s,l)=>s+(l.qte||0),0), tp=Math.round(lots.reduce((s,l)=>s+(Number(l.palox)||0),0)*100)/100;
@@ -1477,7 +1682,7 @@ function tabInfos(ch, body){
   body.innerHTML=`
     <div class="card">
       <div class="hhead"><h3>La chauffe</h3><button class="ghost" id="i-edit" type="button">Modifier</button></div>
-      <dl class="kv"><dt>Durée</dt><dd>${ch.duree} jours · fin prévue J${ch.finDe}–J${ch.finA}</dd>${ch.debut?`<dt>Début</dt><dd>${esc(dayLabel(ch,1))}</dd>`:''}<dt>${esc(L('Seuils','Umbrales'))}</dt><dd>${hasSeuils(ch)||seuilsOf(ch).rappel!=null?esc(seuilsText(ch).replace(/^[^:]+:\s*/,'')):esc(L('aucun (Modifier pour en ajouter)','ninguno (Modificar para agregar)'))}</dd>${ch.sortie?`<dt>${esc(L('Sortie','Salida'))}</dt><dd>${esc(ch.sortie.split('-').reverse().join('/'))}</dd>`:''}<dt>Lots</dt><dd>${lots.length}${tq?' · '+tq.toLocaleString('fr-FR')+' plants':''}${tp?' · '+fmtN(tp)+' palox':''}</dd>${Object.keys(byPg).length&&tq?`<dt>Porte-greffes</dt><dd>${Object.entries(byPg).map(([k,v])=>esc(k)+' '+(v?(Math.round(v/tq*1000)/10).toLocaleString('fr-FR')+' %':'')).join(' · ')}</dd>`:''}</dl>
+      <dl class="kv">${(()=>{ const E=etabOf(ch); return E.nom?`<dt>${esc(L('Entreprise','Empresa'))}</dt><dd>${esc(E.nom)}${E.lieu?' · '+esc(E.lieu):''}${E.propre?'':' <span class="hint">'+esc(L('(Réglages)','(Ajustes)'))+'</span>'}</dd>`:''; })()}<dt>Durée</dt><dd>${ch.duree} jours · fin prévue J${ch.finDe}–J${ch.finA}</dd>${ch.debut?`<dt>Début</dt><dd>${esc(dayLabel(ch,1))}</dd>`:''}<dt>${esc(L('Seuils','Umbrales'))}</dt><dd>${hasSeuils(ch)||seuilsOf(ch).rappel!=null?esc(seuilsText(ch).replace(/^[^:]+:\s*/,'')):esc(L('aucun (Modifier pour en ajouter)','ninguno (Modificar para agregar)'))}</dd>${ch.sortie?`<dt>${esc(L('Sortie','Salida'))}</dt><dd>${esc(ch.sortie.split('-').reverse().join('/'))}</dd>`:''}<dt>Lots</dt><dd>${lots.length}${tq?' · '+tq.toLocaleString('fr-FR')+' plants':''}${tp?' · '+fmtN(tp)+' palox':''}</dd>${Object.keys(byPg).length&&tq?`<dt>Porte-greffes</dt><dd>${Object.entries(byPg).map(([k,v])=>esc(k)+' '+(v?(Math.round(v/tq*1000)/10).toLocaleString('fr-FR')+' %':'')).join(' · ')}</dd>`:''}</dl>
       ${ch.notes?`<div class="rem">${esc(ch.notes)}</div>`:''}
       ${lots.length?`<div class="scrollx"><table class="lotsTable"><thead><tr><th>Lot</th><th>Variété</th><th>Porte-greffe</th><th>Plants</th><th>Palox</th></tr></thead><tbody>${lots.map(l=>`<tr><td>${esc(l.lot)}</td><td>${esc(l.variete||'')}</td><td>${esc(l.pg||'')}</td><td>${l.qte!=null?l.qte.toLocaleString('fr-FR'):''}</td><td>${l.palox!=null?fmtN(l.palox):'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
     </div>
@@ -1948,7 +2153,7 @@ function tabBilan(ch, body){
   const groups=key=>{ const m={}; lots.forEach(l=>{ const k=l[key]||'?'; (m[k]=m[k]||[]).push(l); }); return Object.entries(m).map(([k,ls])=>({k, a:aggRate(ls)})).filter(x=>x.a.rate!=null).sort((a,b)=>b.a.rate-a.a.rate); };
   const grpHTML=(title,key)=>{ const g=groups(key); if(g.length<1) return ''; return `<div class="field"><span class="lab">${esc(title)}</span><div class="ratelist">${g.map(x=>`<div class="raterow"><span class="rk">${esc(x.k)}</span>${rateBar(x.a.rate)}<span class="rv mono">${pct(x.a.rate)}</span></div>`).join('')}</div></div>`; };
   body.innerHTML=`
-    <p class="note">${esc(L("À la sortie de chauffe, trie un échantillon de chaque lot (ou le lot entier) et note combien de plants sont bons. L'app calcule la réussite de chaque lot et la compare d'une saison à l'autre (Accueil → Comparer les saisons).","Al salir de la calefacción, revisa una muestra de cada lote (o el lote entero) y anota cuántas plantas están buenas. La app calcula el éxito de cada lote y lo compara de una temporada a otra (Inicio → Comparar temporadas)."))}</p>
+    <p class="note">${esc(L("À la sortie de chauffe, trie un échantillon de chaque lot (ou le lot entier) et note combien de plants sont bons (1er et 2e choix), à remettre en chauffe ou en rebut. Ensuite, suis l'acclimatation dans l'onglet Acclim. L'app calcule la réussite de chaque lot et la compare d'une saison à l'autre (Accueil → Comparer les saisons).","Al salir de la calefacción, revisa una muestra de cada lote (o el lote entero) y anota cuántas plantas están buenas (1ª y 2ª), a recalentar o descartadas. Después, sigue la aclimatación en la pestaña Aclim. La app calcula el éxito de cada lote y lo compara de una temporada a otra (Inicio → Comparar temporadas)."))}</p>
     <div class="card">
       <div class="hhead"><h3>${esc(L('Réussite de la chauffe','Éxito de la calefacción'))}</h3><span class="mono">${esc(plural(done,'lot','lots','lote','lotes'))} / ${lots.length}</span></div>
       <div class="bigrate">${pct(agg.rate)}</div>
@@ -1978,10 +2183,12 @@ function tabBilan(ch, body){
       const mode0 = isPctBilan(l.b) ? 'pct' : (l.b ? 'compte' : (S.bilanMode||'compte'));
       d.innerHTML=head+`<div class="field"><span class="lab">${esc(L('Comment saisir ?','¿Cómo ingresar?'))}</span><div class="seg" id="be-mode"><button type="button" data-v="compte" aria-pressed="${mode0==='compte'}">${esc(L('Compter les plants','Contar las plantas'))}</button><button type="button" data-v="pct" aria-pressed="${mode0==='pct'}">${esc(L('Pourcentage direct','Porcentaje directo'))}</button></div></div>
         <div id="be-pctbox"${mode0==='pct'?'':' hidden'} class="field"><label for="be-pct">${esc(L('Réussite (%)','Éxito (%)'))}</label><input id="be-pct" class="num" type="text" inputmode="decimal" value="${isPctBilan(b)?esc(fmtN(b.pct)):''}" placeholder="%"><span class="ex">${esc(L('Ex. : 92 ou 87,5. Pratique si le chef de culture te donne directement le pourcentage.','Ej.: 92 u 87,5. Útil si el jefe de cultivo te da directamente el porcentaje.'))}</span></div>
-        <div id="be-cntbox"${mode0==='pct'?' hidden':''} class="field"><div class="two"><div class="field"><label for="be-tries">${esc(L('Plants triés','Plantas revisadas'))}</label><input id="be-tries" class="num" type="text" inputmode="numeric" value="${b.tries!=null?b.tries:''}" placeholder="N°"></div><div class="field"><label for="be-bons">${esc(L('Plants bons','Plantas buenas'))}</label><input id="be-bons" class="num" type="text" inputmode="numeric" value="${b.bons!=null?b.bons:''}" placeholder="N°"></div></div>
-        <span class="ex">${esc(L("Ex. : 200 triés, 184 bons → 92 %. Un échantillon suffit.","Ej.: 200 revisadas, 184 buenas → 92 %. Basta con una muestra."))}</span>
+        <div id="be-cntbox"${mode0==='pct'?' hidden':''} class="field"><div class="two"><div class="field"><label for="be-tries">${esc(L('Plants triés','Plantas revisadas'))}</label><input id="be-tries" class="num" type="text" inputmode="numeric" value="${b.tries!=null?b.tries:''}" placeholder="N°"></div><div class="field"><label for="be-bons">${esc(L('Bons (1er choix)','Buenas (1ª)'))}</label><input id="be-bons" class="num" type="text" inputmode="numeric" value="${b.bons!=null?b.bons:''}" placeholder="N°"></div></div>
+        <div class="two"><div class="field"><label for="be-c2">${esc(L('2e choix','2ª selección'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="be-c2" class="num" type="text" inputmode="numeric" value="${b.c2?b.c2:''}" placeholder="N°"></div><div class="field"><label for="be-rech">${esc(L('À remettre en chauffe','A recalentar'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></label><input id="be-rech" class="num" type="text" inputmode="numeric" value="${b.rech?b.rech:''}" placeholder="N°"></div></div>
+        <span class="ex">${esc(L("Ex. : 200 triés, 170 en 1er choix, 14 en 2e choix, 4 à remettre en chauffe → 92 % de réussite, 12 rebuts. Un échantillon suffit.","Ej.: 200 revisadas, 170 de 1ª, 14 de 2ª, 4 a recalentar → 92 % de éxito, 12 descartes. Basta con una muestra."))}</span>
         <div class="sumbox" id="be-calc"></div></div>
         <div class="field"><span class="lab">${esc(L('Cause principale des rebuts','Causa principal de los descartes'))} <span class="hint">${esc(L('(facultatif)','(opcional)'))}</span></span><div class="seg" id="be-cause">${CAUSES.map(c=>`<button type="button" data-v="${esc(c)}" aria-pressed="${b.cause===c}">${esc(T(c))}</button>`).join('')}</div></div>
+        <div class="field"><label for="be-dtri">${esc(L('Date du tri','Fecha de la selección'))}</label><input id="be-dtri" type="date" value="${esc(b.dateTri||ch.sortie||new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10))}"></div>
         <div class="field"><label for="be-rem">${esc(L('Remarques','Observaciones'))}</label><input id="be-rem" type="text" value="${esc(b.remarque||'')}"></div>
         <div class="row"><button class="primary" type="button" id="be-ok">${esc(L('Enregistrer le bilan','Guardar el balance'))}</button><button class="ghost" type="button" id="be-x">${esc(L('Annuler','Cancelar'))}</button></div>
         ${l.b?`<button class="ghost danger" type="button" id="be-del">${esc(L('Supprimer ce bilan','Eliminar este balance'))}</button>`:''}
@@ -1989,23 +2196,24 @@ function tabBilan(ch, body){
       el.appendChild(d);
       let cause=b.cause||'';
       $('be-cause').querySelectorAll('button').forEach(x=>x.onclick=()=>{ cause=cause===x.dataset.v?'':x.dataset.v; $('be-cause').querySelectorAll('button').forEach(y=>y.setAttribute('aria-pressed',y.dataset.v===cause)); });
-      const calc=()=>{ const t=num($('be-tries').value), g=num($('be-bons').value); const c=$('be-calc');
-        c.innerHTML = t>0 && g!=null && g<=t ? `<b>${pct(g/t)}</b> · ${esc(plural(t-g,'rebut','rebuts','descarte','descartes'))}` : ''; };
-      $('be-tries').oninput=calc; $('be-bons').oninput=calc; calc();
+      const calc=()=>{ const t=num($('be-tries').value), g=num($('be-bons').value), c2=num($('be-c2').value)||0, rh=num($('be-rech').value)||0; const c=$('be-calc');
+        c.innerHTML = t>0 && g!=null && g+c2+rh<=t ? `<b>${pct((g+c2)/t)}</b> ${esc(L('de réussite','de éxito'))} · ${esc(plural(t-g-c2-rh,'rebut','rebuts','descarte','descartes'))}${rh?' · '+esc(fmtN(rh)+L(' à remettre en chauffe',' a recalentar')):''}` : ''; };
+      ['be-tries','be-bons','be-c2','be-rech'].forEach(id=>$(id).oninput=calc); calc();
       let mode=mode0;
       $('be-mode').querySelectorAll('button').forEach(x=>x.onclick=()=>{ mode=x.dataset.v; S.bilanMode=mode; $('be-mode').querySelectorAll('button').forEach(y=>y.setAttribute('aria-pressed',y===x)); $('be-pctbox').hidden=mode!=='pct'; $('be-cntbox').hidden=mode==='pct'; $('be-st').textContent=''; const f=$(mode==='pct'?'be-pct':'be-tries'); if(f) f.focus(); });
       $('be-x').onclick=()=>{ S.bilanEdit=null; renderChauffe(); };
       if($('be-del')){ let c=false; $('be-del').onclick=async()=>{ if(!c){ c=true; $('be-del').textContent=L('Toucher encore pour supprimer','Tocar otra vez para eliminar'); return; } await removeEntry(l.b); S.bilanEdit=null; toast(L('Bilan supprimé.','Balance eliminado.')); renderChauffe(); }; }
       $('be-ok').onclick=async()=>{ const t=num($('be-tries').value), g=num($('be-bons').value), stEl=$('be-st');
-        const base=()=>Object.assign({}, l.b||{id:'bilan:'+ch.id+':'+l.lot, type:'bilan', chauffeId:ch.id, lot:l.lot, creeLe:nowIso()}, {jour:ch.duree, variete:l.variete, pg:l.pg, cause, remarque:$('be-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom});
+        const base=()=>Object.assign({}, l.b||{id:'bilan:'+ch.id+':'+l.lot, type:'bilan', chauffeId:ch.id, lot:l.lot, creeLe:nowIso()}, {jour:ch.duree, variete:l.variete, pg:l.pg, cause, dateTri:$('be-dtri').value||'', remarque:$('be-rem').value.trim(), auteurId:S.me.id, auteurNom:S.me.nom});
         if(mode==='pct'){ const pv=num($('be-pct').value);
           if(pv==null||pv<0||pv>100){ stEl.textContent=L('Indique un pourcentage entre 0 et 100.','Indica un porcentaje entre 0 y 100.'); stEl.className='status err'; return; }
-          const ent=Object.assign(base(),{pct:Math.round(pv*10)/10, tries:null, bons:null}); delete ent.supprime; await saveEntry(ent); S.bilanEdit=null;
+          const ent=Object.assign(base(),{pct:Math.round(pv*10)/10, tries:null, bons:null, c2:null, rech:null}); delete ent.supprime; await saveEntry(ent); S.bilanEdit=null;
           toast(L('Bilan du lot ','Balance del lote ')+l.lot+L(' enregistré : ',' guardado: ')+pct(bilanRate(ent))+'.'); renderChauffe(); return; }
         if(!(t>0)){ stEl.textContent=L('Indique le nombre de plants triés.','Indica el número de plantas revisadas.'); stEl.className='status err'; return; }
         if(g==null||g<0){ stEl.textContent=L('Indique le nombre de plants bons.','Indica el número de plantas buenas.'); stEl.className='status err'; return; }
-        if(g>t){ stEl.textContent=L('Il ne peut pas y avoir plus de plants bons que de plants triés.','No puede haber más plantas buenas que revisadas.'); stEl.className='status err'; return; }
-        const ent=Object.assign(base(),{tries:Math.round(t), bons:Math.round(g), pct:null});
+        const c2=num($('be-c2').value)||0, rh=num($('be-rech').value)||0;
+        if(c2<0||rh<0||g+c2+rh>t){ stEl.textContent=L('1er choix + 2e choix + à remettre en chauffe ne peut pas dépasser le nombre de plants triés.','1ª + 2ª + a recalentar no puede superar el número de plantas revisadas.'); stEl.className='status err'; return; }
+        const ent=Object.assign(base(),{tries:Math.round(t), bons:Math.round(g), c2:Math.round(c2), rech:Math.round(rh), pct:null});
         delete ent.supprime; await saveEntry(ent); S.bilanEdit=null; toast(L('Bilan du lot ','Balance del lote ')+l.lot+L(' enregistré : ',' guardado: ')+pct(bilanRate(ent))+'.'); renderChauffe(); };
       return;
     }
@@ -2093,7 +2301,8 @@ const REG_CSS=`.paper{background:#fff;color:#1b1b1b;border:1px solid var(--line,
 .paper section{break-inside:auto}
 .paper .fig{break-inside:avoid;page-break-inside:avoid}
 .paper svg{max-width:100%}
-.paper .scrollx{overflow-x:auto}`;
+.paper .scrollx{overflow-x:auto}
+.paper td .why{color:#222;display:inline-block;margin-top:3px}`;
 function registreHTML(ch){
   const lots=lotsWithBilan(ch), ds=dayStats(ch), s=seuilsOf(ch), agg=aggRate(lots);
   const fin=ch.debut?dayDate(ch,ch.duree):null; const dfmt=d=>d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear():'—';
@@ -2105,7 +2314,7 @@ function registreHTML(ch){
   const obsByDay=j=>entriesOf(ch.id).filter(e=>e.jour===j && e.type==='obs');
   const ctrl=entriesOf(ch.id,'lot').sort((a,b)=>a.jour-b.jour);
   const now=new Date();
-  return `<div class="etab"><div><b>${esc(S.etab.nom||L('Établissement non renseigné','Establecimiento sin indicar'))}</b>${S.etab.lieu?'<br>'+esc(S.etab.lieu):''}${S.etab.agrement?'<br><span class="small">'+esc(L('N° d\'agrément / enregistrement : ','N° de registro: ')+S.etab.agrement)+'</span>':''}</div>
+  return `<div class="etab"><div>${etabHeadHTML(etabOf(ch))}</div>
       <div class="small" style="text-align:right">${esc(L('Registre de chauffe / stratification','Registro de calefacción / estratificación'))}<br>${esc(L('Édité le ','Emitido el ')+dfmt(now))}</div></div>
     <h2>${esc(ch.nom)}</h2>
     <section><dl>
@@ -2120,11 +2329,12 @@ function registreHTML(ch){
     ${releves(ch.id).length?`<section class="fig"><h3>${esc(L('Courbe des températures','Curva de temperaturas'))}</h3>${tempSVG(ch,true)}</section>`:''}
     ${humSVG(ch,true,S.hv)?`<section class="fig"><h3>${esc(L("Courbe de l'humidité relative",'Curva de la humedad relativa'))}</h3>${humSVG(ch,true,S.hv)}</section>`:''}
     ${o2SVG(ch,true,S.ov)?`<section class="fig"><h3>${esc(L("Courbe de l'oxygène (O₂)",'Curva del oxígeno (O₂)'))}</h3>${o2SVG(ch,true,S.ov)}</section>`:''}
-    ${lots.length?`<section><h3>${esc(L('1. Lots','1. Lotes'))}</h3>${lots.some(l=>bilanRate(l.b)!=null)?`<div class="fig" style="margin-bottom:10px"><b class="small">${esc(L('Réussite par lot (%)','Éxito por lote (%)'))}</b>${histoSVG(ch,true)}</div>`:''}<div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Plants','Plantas'))}</th><th>Palox</th><th>${esc(L('Triés','Revisadas'))}</th><th>${esc(L('Bons','Buenas'))}</th><th>${esc(L('Réussite','Éxito'))}</th><th>${esc(L('Cause rebuts','Causa descartes'))}</th></tr></thead><tbody>${lots.map(l=>{ const c=(ch.lots||[]).find(x=>String(x.lot)===l.lot)||{}; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete)}</td><td>${esc(l.pg)}</td><td>${l.qte!=null?esc(fmtN(l.qte)):''}</td><td>${c.palox!=null?esc(fmtN(c.palox)):''}</td><td>${l.b&&l.b.tries>0?l.b.tries:''}</td><td>${l.b&&l.b.tries>0?l.b.bons:''}</td><td>${l.b?pct(bilanRate(l.b)):''}</td><td>${l.b&&l.b.cause?esc(T(l.b.cause)):''}</td></tr>`; }).join('')}</tbody></table></div></section>`:''}
-    <section><h3>${esc(L('2. Conditions jour par jour','2. Condiciones día por día'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° pièce (°C)','T° sala (°C)'))}</th><th>${esc(L('T° palox min–max (°C)','T° palox mín–máx (°C)'))}</th><th>${esc(L('Moy. (°C)','Prom. (°C)'))}</th><th>${esc(L('HR pièce (%)','HR sala (%)'))}</th><th>${esc(L('HR palox (%)','HR palox (%)'))}</th><th>${esc(L('O₂ min. (%)','O₂ mín. (%)'))}</th><th>${esc(L('Mesures','Mediciones'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${ds.map(d=>{ const a=dayTempAlerts(ch,d).concat(...obsByDay(d.j).map(alertsOf)); return `<tr><td>J${d.j}</td><td>${esc(dayShort(ch,d.j))}</td><td>${rng(d.extMin,d.extMax)}</td><td${d.cold||d.hot?' class="al"':''}>${rng(d.inMin,d.inMax)}</td><td>${d.inMean!=null?fmtN(r1(d.inMean)):'—'}</td><td>${rng(d.humExtMin,d.humExtMax)}</td><td>${rng(d.humInMin,d.humInMax)}</td><td${d.o2low?' class="al"':''}>${d.o2Min!=null?fmtN(d.o2Min):'—'}</td><td>${d.n?d.n+(d.nCap?' ('+esc(L('dont ','de ellas '))+d.nCap+' '+esc(L('capteur','sensor'))+')':''):'—'}</td><td class="al">${a.map(esc).join('<br>')}</td></tr>`; }).join('')}</tbody></table></div></section>
+    ${lots.length?`<section><h3>${esc(L('1. Lots et triage','1. Lotes y selección'))}</h3>${lots.some(l=>bilanRate(l.b)!=null)?`<div class="fig" style="margin-bottom:10px"><b class="small">${esc(L('Réussite par lot (%)','Éxito por lote (%)'))}</b>${histoSVG(ch,true)}</div>`:''}<div class="scrollx"><table><thead><tr><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Variété','Variedad'))}</th><th>${esc(L('Porte-greffe','Portainjerto'))}</th><th>${esc(L('Plants','Plantas'))}</th><th>Palox</th><th>${esc(L('Triés','Revisadas'))}</th><th>${esc(L('Bons','Buenas'))}</th>${lots.some(l=>l.b&&(l.b.c2||l.b.rech))?`<th>${esc(L('Dont 2e choix','De ellas 2ª'))}</th><th>${esc(L('À rechauffer','A recalentar'))}</th>`:''}<th>${esc(L('Réussite','Éxito'))}</th><th>${esc(L('Cause rebuts','Causa descartes'))}</th></tr></thead><tbody>${lots.map(l=>{ const c=(ch.lots||[]).find(x=>String(x.lot)===l.lot)||{}; return `<tr><td>${esc(l.lot)}</td><td>${esc(l.variete)}</td><td>${esc(l.pg)}</td><td>${l.qte!=null?esc(fmtN(l.qte)):''}</td><td>${c.palox!=null?esc(fmtN(c.palox)):''}</td><td>${l.b&&l.b.tries>0?l.b.tries:''}</td><td>${l.b&&l.b.tries>0?bilanBons(l.b):''}</td>${lots.some(x=>x.b&&(x.b.c2||x.b.rech))?`<td>${l.b&&l.b.c2?l.b.c2:''}</td><td>${l.b&&l.b.rech?l.b.rech:''}</td>`:''}<td>${l.b?pct(bilanRate(l.b)):''}</td><td>${l.b&&l.b.cause?esc(T(l.b.cause)):''}</td></tr>`; }).join('')}</tbody></table></div></section>`:''}
+    <section><h3>${esc(L('2. Conditions jour par jour','2. Condiciones día por día'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Date','Fecha'))}</th><th>${esc(L('T° pièce (°C)','T° sala (°C)'))}</th><th>${esc(L('T° palox min–max (°C)','T° palox mín–máx (°C)'))}</th><th>${esc(L('Moy. (°C)','Prom. (°C)'))}</th><th>${esc(L('HR pièce (%)','HR sala (%)'))}</th><th>${esc(L('HR palox (%)','HR palox (%)'))}</th><th>${esc(L('O₂ min. (%)','O₂ mín. (%)'))}</th><th>${esc(L('Mesures','Mediciones'))}</th><th>${esc(L('Alertes','Alertas'))}</th></tr></thead><tbody>${ds.map(d=>{ const a=dayTempAlerts(ch,d).concat(...obsByDay(d.j).map(alertsOf)); return `<tr><td>J${d.j}</td><td>${esc(dayShort(ch,d.j))}</td><td>${rng(d.extMin,d.extMax)}</td><td${d.cold||d.hot?' class="al"':''}>${rng(d.inMin,d.inMax)}</td><td>${d.inMean!=null?fmtN(r1(d.inMean)):'—'}</td><td>${rng(d.humExtMin,d.humExtMax)}</td><td>${rng(d.humInMin,d.humInMax)}</td><td${d.o2low?' class="al"':''}>${d.o2Min!=null?fmtN(d.o2Min):'—'}</td><td>${d.n?d.n+(d.nCap?' ('+esc(L('dont ','de ellas '))+d.nCap+' '+esc(L('capteur','sensor'))+')':''):'—'}</td><td class="al">${a.map(esc).join('<br>')}${obsByDay(d.j).filter(o=>o.raison).map(o=>'<br><span class="why"><b>'+esc(L('Raison : ','Causa: '))+'</b>'+esc(o.raison)+'</span>').join('')}</td></tr>`; }).join('')}</tbody></table></div></section>
     <section><h3>${esc(L('3. Traitements phytosanitaires','3. Tratamientos fitosanitarios'))}</h3>${phytoTableHTML(ch,true)||'<p class="small">'+esc(L('Aucun traitement enregistré.','Ningún tratamiento registrado.'))+'</p>'}</section>
-    <section><h3>${esc(L('4. Observations et actions','4. Observaciones y acciones'))}</h3>${ds.map(d=>{ const os=obsByDay(d.j); if(!os.length) return ''; return `<div class="day"><b>J${d.j}${ch.debut?' · '+esc(dayLabel(ch,d.j)):''}</b><ul>${os.map(o=>`<li>${OBS_KEYS.filter(k=>o[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(o[k]))).join(' · ')}${o.remarque?'<br>'+esc(o.remarque):''} <span class="small">— ${esc(authorName(o))}</span></li>`).join('')}</ul></div>`; }).join('')||'<p class="small">—</p>'}</section>
+    <section><h3>${esc(L('4. Observations et actions','4. Observaciones y acciones'))}</h3>${ds.map(d=>{ const os=obsByDay(d.j); if(!os.length) return ''; return `<div class="day"><b>J${d.j}${ch.debut?' · '+esc(dayLabel(ch,d.j)):''}</b><ul>${os.map(o=>`<li>${OBS_KEYS.filter(k=>o[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(o[k]))).join(' · ')}${o.remarque?'<br>'+esc(o.remarque):''}${o.raison?'<br><b>'+esc(L('Raison du problème : ','Causa del problema: '))+'</b>'+esc(o.raison):''} <span class="small">— ${esc(authorName(o))}</span></li>`).join('')}</ul></div>`; }).join('')||'<p class="small">—</p>'}</section>
     ${ctrl.length?`<section><h3>${esc(L('5. Contrôles par lot','5. Controles por lote'))}</h3><div class="scrollx"><table><thead><tr><th>${esc(L('Jour','Día'))}</th><th>${esc(L('Lot','Lote'))}</th><th>${esc(L('Plants regardés','Plantas revisadas'))}</th><th>${esc(L('Constat','Observación'))}</th><th>${esc(L('Par','Por'))}</th></tr></thead><tbody>${ctrl.map(r=>`<tr><td>J${r.jour}</td><td>${esc(r.lot)}${r.variete||r.pg?' · '+esc([r.variete,r.pg].filter(Boolean).join('/')):''}</td><td>${r.nb!=null?esc(r.nb):''}</td><td>${LOT_KEYS.filter(k=>r[k]).map(k=>esc(T(OPTS[k].label)+L(' : ',': ')+T(r[k]))).join(' · ')}${r.remarque?'<br>'+esc(r.remarque):''}</td><td>${esc(authorName(r))}</td></tr>`).join('')}</tbody></table></div></section>`:''}
+    ${accRegistreHTML(ch, ctrl.length?6:5)}
     <section><h3>${esc(L('Intervenants','Participantes'))}</h3><p>${Object.entries(authors).map(([n,k])=>esc(n)+' ('+esc(plural(k,'note','notes','nota','notas'))+')').join(' · ')||'—'}</p></section>
     <div class="visa"><div>${esc(L('Visa du responsable','Visto bueno del responsable'))}</div><div>${esc(L('Date','Fecha'))}</div></div>
     <p class="small">${esc(L('Document généré par ','Documento generado por ')+APP_NAME+' '+appVer()+L(' à partir des notes saisies sur l\'appareil.',' a partir de las notas ingresadas en el dispositivo.'))}</p>`;
@@ -2134,7 +2344,7 @@ function renderRegistre(){
   app.innerHTML=`<header class="top noprint"><div class="title-row"><div class="left"><button class="back" id="r-back" type="button" aria-label="Retour">‹</button><h1>${esc(L('Registre de traçabilité','Registro de trazabilidad'))}</h1></div></div></header>
   <section class="panel">
     <div class="card noprint" style="gap:10px">
-      ${S.etab.nom?'':`<div class="alertbox warnbox"><span>${esc(L("Le nom de l'établissement n'est pas renseigné.","El nombre del establecimiento no está indicado."))}</span><button class="ghost" type="button" id="r-set">${esc(L('Le renseigner dans Réglages','Indicarlo en Ajustes'))}</button></div>`}
+      ${etabOf(ch).nom?'':`<div class="alertbox warnbox"><span>${esc(L("Le nom de l'entreprise n'est pas renseigné pour cette chauffe.","El nombre de la empresa no está indicado para esta calefacción."))}</span><button class="ghost" type="button" id="r-set">${esc(L('Le renseigner pour cette chauffe','Indicarlo para esta calefacción'))}</button></div>`}
       <div class="row"><button class="primary" type="button" id="r-print">${esc(L('Imprimer / PDF','Imprimir / PDF'))}</button><button class="ghost" type="button" id="r-file">${esc(L('Envoyer le fichier','Enviar el archivo'))}</button></div>
       <p class="note">${esc(L("Sur iPhone et iPad : « Imprimer / PDF », puis touche Partager (⬆︎) dans l'aperçu pour enregistrer le PDF dans Fichiers. Si l'impression ne s'ouvre pas, utilise « Envoyer le fichier » puis ouvre-le et imprime-le.","En iPhone y iPad: « Imprimir / PDF », luego toca Compartir (⬆︎) en la vista previa para guardar el PDF en Archivos. Si la impresión no se abre, usa « Enviar el archivo », ábrelo e imprímelo."))}</p>
       <div class="status" id="r-st"></div>
@@ -2142,7 +2352,7 @@ function renderRegistre(){
     <article class="paper" id="reg">${registreHTML(ch)}</article>
   </section>`;
   $('r-back').onclick=()=>go('chauffe',{tab:'hist'});
-  if($('r-set')) $('r-set').onclick=()=>go('settings');
+  if($('r-set')) $('r-set').onclick=()=>{ renderChauffeForm._init=false; go('edit'); };
   $('r-print').onclick=()=>{ try{ window.print(); }catch(e){ $('r-st').textContent=L("L'impression n'est pas disponible ici : utilise « Envoyer le fichier ».","La impresión no está disponible aquí: usa « Enviar el archivo »."); $('r-st').className='status err'; } };
   $('r-file').onclick=()=>{ const doc=`<!doctype html><html lang="${S.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L('Registre','Registro')+' — '+ch.nom)}</title><style>body{margin:0;padding:16px;background:#fff}${REG_CSS}.paper{border:0;padding:0;max-width:900px;margin:0 auto}@media print{body{padding:0}}</style></head><body><article class="paper">${$('reg').innerHTML}</article></body></html>`;
     shareFile(new File([doc], slug(L('registre-','registro-')+ch.nom)+'.html', {type:'text/html'}), $('r-st'), L('Fichier prêt : ouvre-le puis imprime-le en PDF.','Archivo listo: ábrelo e imprímelo en PDF.')); };
@@ -2421,193 +2631,29 @@ const PARC_FIELDS=[{k:'nom', t:'text', fr:'Nom de la parcelle', es:'Nombre de la
   {k:'certif', t:'text', fr:'Certification', es:'Certificación', ph:'Ex. : base, certifié'},{k:'remarque', t:'area', fr:'Remarques', es:'Observaciones'}];
 const ANA_FIELDS=[{k:'date', t:'date', fr:'Date', es:'Fecha'},{k:'analyse', t:'text', fr:'Analyse / observation', es:'Análisis / observación', ph:'Ex. : ELISA GFLV, prospection flavescence'},
   {k:'resultat', t:'seg', fr:'Résultat', es:'Resultado', opts:[['Négatif','Negativo'],['Positif','Positivo'],['En attente','Pendiente']]},{k:'remarque', t:'area', fr:'Remarques', es:'Observaciones'}];
-/* ---------- Localisation des parcelles : lecture de fichiers (KML, KMZ, GeoJSON, GPX) ----------
-   Une parcelle garde sa forme dans p.geo : une liste d'objets GeoJSON « Feature » (longitude, latitude). */
-const r6 = v => Math.round(v*1e6)/1e6;
-const closeRing = r => { if(r.length && (r[0][0]!==r[r.length-1][0] || r[0][1]!==r[r.length-1][1])) r=r.concat([r[0]]); return r; };
-function geoCoordsTxt(t){ return String(t||'').trim().split(/\s+/).map(c=>c.split(',').map(Number)).filter(c=>c.length>=2&&isFinite(c[0])&&isFinite(c[1])&&Math.abs(c[1])<=90&&Math.abs(c[0])<=180).map(c=>[r6(c[0]),r6(c[1])]); }
-function geoParseKML(text){
-  const doc=xmlDoc(text); if(doc.getElementsByTagName('parsererror').length) throw new Error('xml');
-  const items=[];
-  byTag(doc,'Placemark').forEach((pm,i)=>{ const nm=byTag(pm,'name')[0]; const name=(nm&&nm.textContent||'').trim()||(L('Forme ','Forma ')+(i+1));
-    const feats=[]; const F=g=>feats.push({type:'Feature',properties:{name},geometry:g});
-    byTag(pm,'Polygon').forEach(pg=>{ const ob=byTag(pg,'outerBoundaryIs')[0]; if(!ob) return; const o=geoCoordsTxt((byTag(ob,'coordinates')[0]||{}).textContent); if(o.length<3) return;
-      const holes=byTag(pg,'innerBoundaryIs').map(ib=>geoCoordsTxt((byTag(ib,'coordinates')[0]||{}).textContent)).filter(h=>h.length>=3).map(closeRing);
-      F({type:'Polygon',coordinates:[closeRing(o),...holes]}); });
-    byTag(pm,'LineString').forEach(ls=>{ const c=geoCoordsTxt((byTag(ls,'coordinates')[0]||{}).textContent); if(c.length>1) F({type:'LineString',coordinates:c}); });
-    byTag(pm,'Point').forEach(pt=>{ const c=geoCoordsTxt((byTag(pt,'coordinates')[0]||{}).textContent); if(c.length) F({type:'Point',coordinates:c[0]}); });
-    if(feats.length) items.push({name, feats}); });
-  return items;
-}
-function geoParseGPX(text){
-  const doc=xmlDoc(text); if(doc.getElementsByTagName('parsererror').length) throw new Error('xml');
-  const items=[]; const nameOf=(el,def)=>{ const n=[...el.children].find(c=>c.localName==='name'); return (n&&n.textContent.trim())||def; };
-  const pt=e=>[r6(Number(e.getAttribute('lon'))),r6(Number(e.getAttribute('lat')))];
-  const lineOrPoly=(pts,name)=>{ pts=pts.filter(p=>isFinite(p[0])&&isFinite(p[1])); if(pts.length<2) return;
-    const a=pts[0], b=pts[pts.length-1]; const closed=pts.length>=4&&Math.abs(a[0]-b[0])<2e-5&&Math.abs(a[1]-b[1])<2e-5;
-    items.push({name, feats:[{type:'Feature',properties:{name},geometry:closed?{type:'Polygon',coordinates:[closeRing(pts)]}:{type:'LineString',coordinates:pts}}]}); };
-  byTag(doc,'trk').forEach((t,i)=>lineOrPoly(byTag(t,'trkpt').map(pt), nameOf(t,L('Trace ','Traza ')+(i+1))));
-  byTag(doc,'rte').forEach((t,i)=>lineOrPoly(byTag(t,'rtept').map(pt), nameOf(t,L('Itinéraire ','Ruta ')+(i+1))));
-  byTag(doc,'wpt').forEach((w,i)=>{ const c=pt(w); if(isFinite(c[0])&&isFinite(c[1])){ const name=nameOf(w,L('Point ','Punto ')+(i+1)); items.push({name, feats:[{type:'Feature',properties:{name},geometry:{type:'Point',coordinates:c}}]}); } });
-  return items;
-}
-function geoParseJSON(text){
-  const j=JSON.parse(text); const feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:j.type&&j.coordinates?[{type:'Feature',properties:{},geometry:j}]:[];
-  const nameKeys=['name','nom','Name','NOM','Nom','nombre','NOMBRE','label','id','ID'];
-  return feats.filter(f=>f&&f.geometry&&f.geometry.coordinates).map((f,i)=>{ const pr=f.properties||{}; const k=nameKeys.find(k=>pr[k]!=null&&String(pr[k]).trim());
-    const name=k?String(pr[k]).trim():(L('Forme ','Forma ')+(i+1));
-    const rnd=c=>typeof c[0]==='number'?[r6(c[0]),r6(c[1])]:c.map(rnd);
-    return {name, feats:[{type:'Feature',properties:{name},geometry:{type:f.geometry.type,coordinates:rnd(f.geometry.coordinates)}}]}; });
-}
-async function geoReadFile(f){
-  const n=f.name.toLowerCase();
-  if(/\.kmz$/.test(n)){ if(typeof DecompressionStream==='undefined') throw new Error('old'); const z=await unzipEntries(await f.arrayBuffer()); const k=Object.keys(z).filter(x=>/\.kml$/i.test(x)).sort((a,b)=>(/doc\.kml$/i.test(b)?1:0)-(/doc\.kml$/i.test(a)?1:0))[0]; if(!k) throw new Error('nokml'); return geoParseKML(await z.__read(k)); }
-  if(/\.zip$/.test(n)||/\.shp$/.test(n)) throw new Error('shp');
-  const text=await f.text();
-  if(/\.gpx$/.test(n)||/<gpx[\s>]/i.test(text.slice(0,600))) return geoParseGPX(text);
-  if(/\.kml$/.test(n)||/<kml[\s>]/i.test(text.slice(0,600))) return geoParseKML(text);
-  return geoParseJSON(text);
-}
-const GEO_ACCEPT='.kml,.kmz,.geojson,.json,.gpx,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/geo+json,application/json,application/gpx+xml';
-function geoErr(e){ const m=e&&e.message; return m==='shp'?L("Les fichiers Shapefile (.shp / .zip) ne sont pas lus. Ouvre-les dans geojson.io ou Google Earth et exporte-les en KML ou GeoJSON.","Los archivos Shapefile (.shp / .zip) no se leen. Ábrelos en geojson.io o Google Earth y expórtalos en KML o GeoJSON.")
-  : m==='old'?L('Ce téléphone est trop ancien pour lire les .kmz : exporte en .kml.','Este teléfono es demasiado antiguo para leer .kmz: exporta en .kml.')
-  : L('Fichier illisible. Formats acceptés : KML, KMZ (Google Earth), GeoJSON, GPX.','Archivo ilegible. Formatos aceptados: KML, KMZ (Google Earth), GeoJSON, GPX.'); }
-
-/* Surface (m²) des polygones, sur la sphère terrestre. */
-function ringArea(r){ const R=6378137, rad=Math.PI/180; let a=0; for(let i=0;i<r.length-1;i++){ const [x1,y1]=r[i],[x2,y2]=r[i+1]; a+=(x2-x1)*rad*(2+Math.sin(y1*rad)+Math.sin(y2*rad)); } return Math.abs(a*R*R/2); }
-function geoArea(feats){ let a=0; (feats||[]).forEach(f=>{ const g=f.geometry; if(!g) return; const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[]; polys.forEach(p=>{ if(!p[0]) return; a+=ringArea(p[0]); p.slice(1).forEach(h=>a-=ringArea(h)); }); }); return a; }
-function geoBBox(feats){ let x0=180,y0=90,x1=-180,y1=-90, any=false; const walk=c=>{ if(typeof c[0]==='number'){ any=true; x0=Math.min(x0,c[0]); x1=Math.max(x1,c[0]); y0=Math.min(y0,c[1]); y1=Math.max(y1,c[1]); } else c.forEach(walk); }; (feats||[]).forEach(f=>f.geometry&&walk(f.geometry.coordinates)); return any?[x0,y0,x1,y1]:null; }
-function geoCenter(feats){ const b=geoBBox(feats); return b?[(b[1]+b[3])/2,(b[0]+b[2])/2]:null; }
-function geoKind(feats){ const t=(feats||[]).map(f=>f.geometry&&f.geometry.type); if(t.some(x=>/Polygon/.test(x))) return 'poly'; if(t.some(x=>/LineString/.test(x))) return 'line'; return t.length?'point':''; }
-function geoLabel(feats){ if(!feats||!feats.length) return L('Pas de localisation','Sin ubicación'); const k=geoKind(feats), a=geoArea(feats);
-  return k==='poly'?L('Contour','Contorno')+' · '+fmtN(Math.round(a/100)/100)+' ha':k==='line'?L('Tracé','Trazado'):L('Point GPS','Punto GPS'); }
-
-/* Export KML (Google Earth) et GeoJSON. */
-function geoExport(ps, kind){
-  const withGeo=ps.filter(p=>p.geo&&p.geo.length);
-  if(kind==='geojson'){ const fc={type:'FeatureCollection',features:withGeo.flatMap(p=>p.geo.map(f=>({type:'Feature',properties:{name:p.nom,type:p.ptype,variete:p.variete||'',clone:p.clone||'',surface_ha:p.surface??null},geometry:f.geometry})))};
-    return new File([JSON.stringify(fc)],'parcelles.geojson',{type:'application/geo+json'}); }
-  const x=s=>esc(s); const co=c=>c.map(p=>p[0]+','+p[1]+',0').join(' ');
-  const g=geo=>{ if(geo.type==='Point') return `<Point><coordinates>${geo.coordinates[0]},${geo.coordinates[1]},0</coordinates></Point>`;
-    if(geo.type==='LineString') return `<LineString><coordinates>${co(geo.coordinates)}</coordinates></LineString>`;
-    const poly=p=>`<Polygon><outerBoundaryIs><LinearRing><coordinates>${co(p[0])}</coordinates></LinearRing></outerBoundaryIs>${p.slice(1).map(h=>`<innerBoundaryIs><LinearRing><coordinates>${co(h)}</coordinates></LinearRing></innerBoundaryIs>`).join('')}</Polygon>`;
-    if(geo.type==='Polygon') return poly(geo.coordinates); if(geo.type==='MultiPolygon') return `<MultiGeometry>${geo.coordinates.map(poly).join('')}</MultiGeometry>`; return ''; };
-  const kml=`<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${x(S.etab.nom||'Parcelles')}</name>`+
-    `<Style id="pg"><LineStyle><color>ff3aa4e0</color><width>2</width></LineStyle><PolyStyle><color>553aa4e0</color></PolyStyle></Style><Style id="greffon"><LineStyle><color>ff7a54c2</color><width>2</width></LineStyle><PolyStyle><color>557a54c2</color></PolyStyle></Style><Style id="pep"><LineStyle><color>ff7abf4f</color><width>2</width></LineStyle><PolyStyle><color>557abf4f</color></PolyStyle></Style>`+
-    withGeo.map(p=>`<Placemark><name>${x(p.nom)}</name><description>${x([p.variete,p.clone&&('clone '+p.clone),p.annee,p.surface!=null&&(fmtN(p.surface)+' ha')].filter(Boolean).join(' · '))}</description><styleUrl>#${p.ptype||'pg'}</styleUrl>${p.geo.length>1?'<MultiGeometry>'+p.geo.map(f=>g(f.geometry)).join('')+'</MultiGeometry>':g(p.geo[0].geometry)}</Placemark>`).join('')+`</Document></kml>`;
-  return new File([kml],'parcelles.kml',{type:'application/vnd.google-earth.kml+xml'});
-}
-
-/* ---------- Carte satellite (Leaflet, chargé seulement à l'ouverture des parcelles) ---------- */
-let leafletP=null, paMap=null, paLayers={}, paBase=null;
-function loadLeaflet(){ if(window.L&&window.L.map) return Promise.resolve(window.L); if(leafletP) return leafletP;
-  leafletP=new Promise((ok,ko)=>{ if(!document.getElementById('lf-css')){ const css=document.createElement('link'); css.id='lf-css'; css.rel='stylesheet'; css.href='leaflet.css'; document.head.appendChild(css); }
-    const s=document.createElement('script'); s.src='leaflet.js'; s.onload=()=>window.L&&window.L.map?ok(window.L):ko(new Error('lf')); s.onerror=()=>{ leafletP=null; ko(new Error('lf')); }; document.head.appendChild(s); });
-  return leafletP; }
-const PARC_COL={pg:'#f0b43c', greffon:'#e46a9a', pep:'#5fd38a'};
-const parcPositive = p => pAll('p_ana').some(a=>a.parcId===p.id&&a.resultat==='Positif');
-async function drawParcMap(ps){
-  const box=$('pa-map'); if(!box) return;
-  let Lf; try{ Lf=await loadLeaflet(); }catch(e){ box.innerHTML=`<div class="mapmsg">${esc(L("La carte n'a pas pu se charger. Elle a besoin d'internet (au moins la première fois).","El mapa no se pudo cargar. Necesita internet (al menos la primera vez)."))}</div>`; return; }
-  if(!document.body.contains(box)) return;
-  if(paMap){ try{ paMap.remove(); }catch(e){} paMap=null; } paLayers={};
-  const map=Lf.map(box,{zoomControl:true, attributionControl:true, tap:true}); map.attributionControl.setPrefix('Leaflet');
-  const layers={
-    sat:Lf.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:18, maxZoom:20, attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'}),
-    plan:Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19, maxZoom:20, attribution:'© OpenStreetMap'})};
-  paBase=S.mapBase==='plan'?'plan':'sat'; layers[paBase].addTo(map);
-  document.querySelectorAll('#pa-base button').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; if(v===paBase) return; map.removeLayer(layers[paBase]); layers[v].addTo(map); paBase=v; S.mapBase=v; try{ localStorage.setItem(LS+'mapBase',v); }catch(e){} document.querySelectorAll('#pa-base button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
-  const group=Lf.featureGroup().addTo(map);
-  ps.forEach(p=>{ if(!p.geo||!p.geo.length) return; const c=PARC_COL[p.ptype]||'#ffffff', pos=parcPositive(p);
-    const lay=Lf.geoJSON({type:'FeatureCollection',features:p.geo},{style:{color:pos?'#ff3b30':c, weight:pos?3.5:2.5, dashArray:pos?'6 5':null, fillColor:c, fillOpacity:.22},
-      pointToLayer:(f,ll)=>Lf.circleMarker(ll,{radius:9,color:'#ffffff',weight:2.5,fillColor:c,fillOpacity:1}),
-      onEachFeature:(f,l)=>{ const pt=f.geometry&&f.geometry.type==='Point'; l.bindTooltip(esc(p.nom),{permanent:true, direction:pt?'top':'center', offset:pt?[0,-10]:[0,0], className:'parclabel'}); }});
-    lay.on('click',()=>{ const el=document.getElementById('parc-'+p.id); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1400); } });
-    lay.addTo(group); paLayers[p.id]=lay; });
-  if(group.getLayers().length) map.fitBounds(group.getBounds().pad(0.2),{maxZoom:17});
-  paMap=map; setTimeout(()=>map.invalidateSize(),60);
-}
-function zoomParc(id){ const lay=paLayers[id]; if(!paMap||!lay) return; $('pa-mapcard').scrollIntoView({behavior:'smooth',block:'start'}); paMap.fitBounds(lay.getBounds().pad(0.4),{maxZoom:18}); }
-const mapsLinks = feats => { const c=geoCenter(feats); if(!c) return ''; const ll=c[0].toFixed(6)+','+c[1].toFixed(6);
-  return `<a class="ghost linkb" href="https://maps.apple.com/?daddr=${ll}" target="_blank" rel="noopener">${esc(L('Itinéraire (Plans)','Ruta (Mapas)'))}</a><a class="ghost linkb" href="https://www.google.com/maps/dir/?api=1&destination=${ll}" target="_blank" rel="noopener">Google Maps</a>`; };
-
-/* ---------- Écran Parcelles ---------- */
 function renderParc(){
-  const ps=pAll('p_parc'); const ed=S.parcEdit; const hasGeo=ps.some(p=>p.geo&&p.geo.length);
-  try{ if(!S.mapBase) S.mapBase=localStorage.getItem(LS+'mapBase')||'sat'; }catch(e){}
+  const ps=pAll('p_parc'); const ed=S.parcEdit;
   app.innerHTML=`<header class="top"><div class="title-row"><div class="left"><button class="back" id="pa-back" type="button" aria-label="Retour">‹</button><h1>${esc(L('Parcelles','Parcelas'))}</h1></div></div></header>
   <section class="panel">
-    <p class="note">${esc(L('Vignes mères (porte-greffes et greffons) et parcelles de pépinière, avec leur localisation et leur suivi sanitaire. Elles se choisissent ensuite dans les étapes des lots.','Plantas madre (portainjertos y púas) y parcelas de vivero, con su ubicación y seguimiento sanitario. Luego se eligen en las etapas de los lotes.'))}</p>
-    <div class="card mapcard" id="pa-mapcard">
-      <div class="hhead"><h3>${esc(L('Carte des parcelles','Mapa de las parcelas'))}</h3>${hasGeo?`<div class="seg mini" id="pa-base"><button type="button" data-v="sat" aria-pressed="${S.mapBase!=='plan'}">${esc(L('Satellite','Satélite'))}</button><button type="button" data-v="plan" aria-pressed="${S.mapBase==='plan'}">${esc(L('Plan','Mapa'))}</button></div>`:''}</div>
-      ${hasGeo?`<div id="pa-map" class="pamap"></div><div class="maplegend">${PARC_TYPES.map(t=>`<span><i style="background:${PARC_COL[t[0]]}"></i>${esc(L(t[1],t[2]))}</span>`).join('')}<span><i class="pos"></i>${esc(L('analyse positive','análisis positivo'))}</span></div>`
-        :`<p class="note">${esc(L("Importe un fichier de tes parcelles (KML ou KMZ de Google Earth, GeoJSON, GPX) ou ajoute un point GPS depuis la fiche d'une parcelle : elles apparaîtront ici sur une vue satellite.","Importa un archivo de tus parcelas (KML o KMZ de Google Earth, GeoJSON, GPX) o agrega un punto GPS desde la ficha de una parcela: aparecerán aquí en una vista satelital."))}</p>`}
-      <div class="row"><label class="ghost filebtn" for="pa-gfile">📍 ${esc(L('Importer un fichier de localisation','Importar un archivo de ubicación'))}</label><input class="vh" id="pa-gfile" type="file" accept="${GEO_ACCEPT}">
-        ${hasGeo?`<button class="ghost" type="button" id="pa-kml">${esc(L('Exporter KML','Exportar KML'))}</button><button class="ghost" type="button" id="pa-gj">${esc(L('Exporter GeoJSON','Exportar GeoJSON'))}</button>`:''}</div>
-      <div id="pa-gimp"></div><div class="status" id="pa-gst"></div>
-    </div>
+    <p class="note">${esc(L('Vignes mères (porte-greffes et greffons) et parcelles de pépinière, avec leur suivi sanitaire. Elles se choisissent ensuite dans les étapes des lots.','Plantas madre (portainjertos y púas) y parcelas de vivero, con su seguimiento sanitario. Luego se eligen en las etapas de los lotes.'))}</p>
     ${ed?'':`<button class="primary" type="button" id="pa-new">${esc(L('+ Nouvelle parcelle','+ Nueva parcela'))}</button>`}
     <div id="pa-form"></div><div class="list" id="pa-list"></div></section>`;
-  $('pa-back').onclick=()=>{ S.parcEdit=null; S.anaEdit=null; if(paMap){ try{ paMap.remove(); }catch(e){} paMap=null; } go('prod'); };
+  $('pa-back').onclick=()=>{ S.parcEdit=null; S.anaEdit=null; go('prod'); };
   if($('pa-new')) $('pa-new').onclick=()=>{ S.parcEdit={id:null}; renderParc(); };
-  if($('pa-kml')) $('pa-kml').onclick=()=>shareFile(geoExport(ps,'kml'),$('pa-gst'),L('Fichier KML prêt (s\'ouvre dans Google Earth).','Archivo KML listo (se abre en Google Earth).'));
-  if($('pa-gj')) $('pa-gj').onclick=()=>shareFile(geoExport(ps,'geojson'),$('pa-gst'),L('Fichier GeoJSON prêt.','Archivo GeoJSON listo.'));
-  // Import d'un fichier : une forme = une parcelle (nouvelle, ou rattachée à une parcelle existante du même nom).
-  $('pa-gfile').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const st=$('pa-gst'); st.textContent=L('Lecture du fichier…','Leyendo el archivo…'); st.className='status';
-    let items; try{ items=await geoReadFile(f); }catch(err){ st.textContent=geoErr(err); st.className='status err'; return; }
-    if(!items.length){ st.textContent=L('Aucune forme trouvée dans ce fichier.','Ninguna forma encontrada en este archivo.'); st.className='status err'; return; }
-    st.textContent=''; const box=$('pa-gimp'); const byName={}; ps.forEach(p=>byName[p.nom.trim().toLowerCase()]=p.id);
-    box.innerHTML=`<div class="card" style="gap:10px;padding:12px"><b>${esc(plural(items.length,'forme trouvée','formes trouvées','forma encontrada','formas encontradas'))}</b>
-      <div class="field"><span class="lab">${esc(L('Type des nouvelles parcelles','Tipo de las nuevas parcelas'))}</span><div class="seg" id="gi-type" data-v="pep">${PARC_TYPES.map(t=>`<button type="button" data-v="${t[0]}" aria-pressed="${t[0]==='pep'}">${esc(L(t[1],t[2]))}</button>`).join('')}</div></div>
-      <div class="xlist">${items.map((it,i)=>{ const m=byName[it.name.trim().toLowerCase()]; return `<div class="girow"><label class="xrow"><input type="checkbox" data-i="${i}" checked><span>${esc(it.name)} <span class="hint">· ${esc(geoLabel(it.feats))}</span></span></label><select data-to="${i}" aria-label="${esc(L('Destination','Destino'))}"><option value="">${esc(L('→ Nouvelle parcelle','→ Nueva parcela'))}</option>${ps.map(p=>`<option value="${esc(p.id)}"${p.id===m?' selected':''}>${esc(L('→ Remplacer la forme de : ','→ Reemplazar la forma de: ')+p.nom)}</option>`).join('')}</select></div>`; }).join('')}</div>
-      <div class="row"><button class="primary" type="button" id="gi-ok">${esc(L('Ajouter à mes parcelles','Agregar a mis parcelas'))}</button><button class="ghost" type="button" id="gi-x">${esc(L('Annuler','Cancelar'))}</button></div></div>`;
-    pBindSegs([{k:'type',t:'seg'}],'gi-');
-    $('gi-x').onclick=()=>{ box.innerHTML=''; };
-    $('gi-ok').onclick=async()=>{ const recs=[]; let nNew=0, nUpd=0;
-      box.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(!cb.checked) return; const i=Number(cb.dataset.i), it=items[i], to=box.querySelector(`[data-to="${i}"]`).value;
-        const area=geoArea(it.feats), sur=area>0?Math.round(area/100)/100:null;
-        if(to){ const p=Object.assign({},ps.find(x=>x.id===to)); p.geo=it.feats; if(p.surface==null&&sur) p.surface=sur; recs.push(p); nUpd++; }
-        else { recs.push(pNew('p_parc',{ptype:$('gi-type').dataset.v||'pep', nom:it.name, geo:it.feats, surface:sur})); nNew++; } });
-      if(!recs.length){ $('pa-gst').textContent=L('Coche au moins une forme.','Marca al menos una forma.'); $('pa-gst').className='status err'; return; }
-      await saveEntries(recs); toast([nNew?plural(nNew,'parcelle créée','parcelles créées','parcela creada','parcelas creadas'):null, nUpd?plural(nUpd,'parcelle localisée','parcelles localisées','parcela ubicada','parcelas ubicadas'):null].filter(Boolean).join(' · ')+'.'); renderParc(); };
-  };
-  if(ed){ const p=ed.id?ps.find(x=>x.id===ed.id)||{}:{ptype:'pg'}; const box=$('pa-form'); let geo=ed.geo!==undefined?ed.geo:(p.geo||null);
+  if(ed){ const p=ed.id?ps.find(x=>x.id===ed.id)||{}:{ptype:'pg'}; const box=$('pa-form');
     box.innerHTML=`<form class="card" id="pa-f" autocomplete="off"><div class="field"><span class="lab">${esc(L('Type','Tipo'))}</span><div class="seg" id="pa-type" data-v="${esc(p.ptype||'pg')}">${PARC_TYPES.map(t=>`<button type="button" data-v="${t[0]}" aria-pressed="${(p.ptype||'pg')===t[0]}">${esc(L(t[1],t[2]))}</button>`).join('')}</div></div>
-      ${PARC_FIELDS.map(f=>pFieldHTML(f,p[f.k],'pa-')).join('')}
-      <div class="field geobox"><span class="lab">${esc(L('Localisation','Ubicación'))}</span><div class="sumbox" id="pf-geo"></div>
-        <div class="row"><label class="ghost filebtn" for="pf-gfile">${esc(L('Importer un fichier','Importar un archivo'))}</label><input class="vh" id="pf-gfile" type="file" accept="${GEO_ACCEPT}"><button class="ghost" type="button" id="pf-gps">${esc(L('Ma position GPS','Mi posición GPS'))}</button><button class="ghost danger" type="button" id="pf-gdel">${esc(L('Retirer','Quitar'))}</button></div>
-        <div id="pf-gpick"></div><span class="ex">${esc(L("Contour de la parcelle depuis Google Earth (KML/KMZ), un GeoJSON ou un GPX. « Ma position GPS » place un point là où tu te trouves.","Contorno de la parcela desde Google Earth (KML/KMZ), un GeoJSON o un GPX. « Mi posición GPS » coloca un punto donde estás."))}</span></div>
-      <div class="row"><button class="primary" type="submit">${esc(L('Enregistrer','Guardar'))}</button><button class="ghost" type="button" id="pa-x">${esc(L('Annuler','Cancelar'))}</button></div>${p.id?`<button class="ghost danger" type="button" id="pa-del">${esc(L('Supprimer la parcelle','Eliminar la parcela'))}</button>`:''}<div class="status" id="pa-st"></div></form>`;
+      ${PARC_FIELDS.map(f=>pFieldHTML(f,p[f.k],'pa-')).join('')}<div class="row"><button class="primary" type="submit">${esc(L('Enregistrer','Guardar'))}</button><button class="ghost" type="button" id="pa-x">${esc(L('Annuler','Cancelar'))}</button></div>${p.id?`<button class="ghost danger" type="button" id="pa-del">${esc(L('Supprimer la parcelle','Eliminar la parcela'))}</button>`:''}<div class="status" id="pa-st"></div></form>`;
     pBindSegs([{k:'type',t:'seg'}],'pa-');
-    const showGeo=()=>{ $('pf-geo').textContent=geoLabel(geo); $('pf-gdel').hidden=!(geo&&geo.length); };
-    const setGeo=feats=>{ geo=feats; const a=geoArea(feats); if(a>0 && !$('pa-surface').value.trim()) $('pa-surface').value=fmtN(Math.round(a/100)/100).replace(/\s/g,''); showGeo(); $('pf-gpick').innerHTML=''; };
-    showGeo();
-    $('pf-gdel').onclick=()=>{ geo=null; showGeo(); };
-    $('pf-gfile').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const st=$('pa-st');
-      let items; try{ items=await geoReadFile(f); }catch(err){ st.textContent=geoErr(err); st.className='status err'; return; }
-      if(!items.length){ st.textContent=L('Aucune forme trouvée dans ce fichier.','Ninguna forma encontrada en este archivo.'); st.className='status err'; return; }
-      st.textContent='';
-      if(items.length===1) return setGeo(items[0].feats);
-      const nm=($('pa-nom').value||'').trim().toLowerCase(); const pick=$('pf-gpick');
-      pick.innerHTML=`<div class="field"><label for="pf-gsel">${esc(L('Quelle forme pour cette parcelle ?','¿Qué forma para esta parcela?'))}</label><select id="pf-gsel">${items.map((it,i)=>`<option value="${i}"${it.name.trim().toLowerCase()===nm?' selected':''}>${esc(it.name+' · '+geoLabel(it.feats))}</option>`).join('')}</select><button class="ghost" type="button" id="pf-gok">${esc(L('Utiliser cette forme','Usar esta forma'))}</button></div>`;
-      $('pf-gok').onclick=()=>setGeo(items[Number($('pf-gsel').value)].feats); };
-    $('pf-gps').onclick=()=>{ const st=$('pa-st'); if(!navigator.geolocation){ st.textContent=L('Localisation indisponible sur cet appareil.','Ubicación no disponible en este dispositivo.'); st.className='status err'; return; }
-      st.textContent=L('Recherche de ta position…','Buscando tu posición…'); st.className='status';
-      navigator.geolocation.getCurrentPosition(pos=>{ setGeo([{type:'Feature',properties:{name:$('pa-nom').value||''},geometry:{type:'Point',coordinates:[r6(pos.coords.longitude),r6(pos.coords.latitude)]}}]); st.textContent=L('Position ajoutée (précision ±','Posición agregada (precisión ±')+Math.round(pos.coords.accuracy)+' m).'; st.className='status ok'; },
-        err=>{ st.textContent=err&&err.code===1?L("Accès à la position refusé. Autorise-le dans Réglages → Confidentialité → Service de localisation → Safari.","Acceso a la ubicación denegado. Autorízalo en Ajustes → Privacidad → Localización → Safari."):L('Position introuvable. Réessaie dehors, avec le GPS activé.','Posición no encontrada. Reintenta afuera, con el GPS activado.'); st.className='status err'; },{enableHighAccuracy:true, timeout:20000, maximumAge:0}); };
     $('pa-x').onclick=()=>{ S.parcEdit=null; renderParc(); };
     if($('pa-del')){ let c=false; $('pa-del').onclick=async()=>{ if(!c){ c=true; $('pa-del').textContent=L('Toucher encore pour supprimer','Tocar otra vez para eliminar'); return; } await removeEntry(p); S.parcEdit=null; renderParc(); }; }
     $('pa-f').onsubmit=async e=>{ e.preventDefault(); const o=pRead(PARC_FIELDS,'pa-'); if(o.err||!o.nom){ $('pa-st').textContent=o.err||L('Donne un nom à la parcelle.','Ponle un nombre a la parcela.'); $('pa-st').className='status err'; return; }
-      const rec=Object.assign({}, p.id?p:pNew('p_parc'), o, {ptype:$('pa-type').dataset.v||'pg', geo:geo&&geo.length?geo:null}); delete rec.supprime; await saveEntry(rec); S.parcEdit=null; toast(L('Parcelle enregistrée.','Parcela guardada.')); renderParc(); };
+      const rec=Object.assign({}, p.id?p:pNew('p_parc'), o, {ptype:$('pa-type').dataset.v||'pg'}); delete rec.supprime; await saveEntry(rec); S.parcEdit=null; toast(L('Parcelle enregistrée.','Parcela guardada.')); renderParc(); };
   }
-  const el=$('pa-list');
-  if(!ps.length){ el.innerHTML=`<div class="item empty">${esc(L('Aucune parcelle pour l\'instant.','Ninguna parcela por ahora.'))}</div>`; }
-  PARC_TYPES.forEach(t=>{ const list=ps.filter(p=>p.ptype===t[0]); if(!list.length) return; const h=document.createElement('h2'); h.innerHTML=`<i class="tdot" style="background:${PARC_COL[t[0]]}"></i>${esc(L(t[1],t[2]))}`; el.appendChild(h);
+  const el=$('pa-list'); if(!ps.length){ el.innerHTML=`<div class="item empty">${esc(L('Aucune parcelle pour l\'instant.','Ninguna parcela por ahora.'))}</div>`; return; }
+  PARC_TYPES.forEach(t=>{ const list=ps.filter(p=>p.ptype===t[0]); if(!list.length) return; const h=document.createElement('h2'); h.textContent=L(t[1],t[2]); el.appendChild(h);
     list.forEach(p=>{ const anas=pAll('p_ana').filter(a=>a.parcId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const pos=anas.some(a=>a.resultat==='Positif');
-      const d=document.createElement('div'); d.className='item'; d.id='parc-'+p.id; const g=p.geo&&p.geo.length;
+      const d=document.createElement('div'); d.className='item';
       d.innerHTML=`<div class="hhead"><span class="d">${esc(p.nom)}</span>${pos?`<span class="chip al">${esc(L('analyse positive','análisis positivo'))}</span>`:''}</div><div class="rem">${esc(pSummary(PARC_FIELDS.filter(f=>f.k!=='nom'),p).join(' · '))}</div>
-        <div class="geoline">📍 ${esc(geoLabel(p.geo))}${g?` <button class="linkbtn" type="button" data-zoom="1">${esc(L('Voir sur la carte','Ver en el mapa'))}</button>`:''}</div>
-        ${g?`<div class="row maplinks">${mapsLinks(p.geo)}</div>`:''}
         <div class="list" style="gap:4px">${anas.map(a=>`<div class="trec"><div>${esc([pdate(a.date),a.analyse,a.resultat?L(a.resultat,{'Négatif':'Negativo','Positif':'Positivo','En attente':'Pendiente'}[a.resultat]):''].filter(Boolean).join(' · '))}${a.remarque?`<div class="rem">${esc(a.remarque)}</div>`:''}</div><button class="ghost" type="button" data-ana="${esc(a.id)}">${esc(L('Modifier','Modificar'))}</button></div>`).join('')}</div>
         <div id="ana-${esc(p.id)}"></div><div class="row"><button class="ghost" type="button" data-addana="1">${esc(L('+ Analyse sanitaire','+ Análisis sanitario'))}</button><button class="ghost" type="button" data-editp="1">${esc(L('Modifier','Modificar'))}</button></div>`;
       el.appendChild(d);
@@ -2617,10 +2663,8 @@ function renderParc(){
         $('an-f').onsubmit=async e=>{ e.preventDefault(); const o=pRead(ANA_FIELDS,'an-'); const rec=Object.assign({}, a||pNew('p_ana',{parcId:p.id}), o); delete rec.supprime; await saveEntry(rec); toast(L('Analyse enregistrée.','Análisis guardado.')); renderParc(); }; };
       d.querySelector('[data-addana]').onclick=()=>openAna(null);
       d.querySelectorAll('[data-ana]').forEach(b=>b.onclick=()=>openAna(anas.find(a=>a.id===b.dataset.ana)));
-      d.querySelector('[data-editp]').onclick=()=>{ S.parcEdit={id:p.id}; renderParc(); setTimeout(()=>$('pa-form').scrollIntoView({block:'start'}),30); };
-      const z=d.querySelector('[data-zoom]'); if(z) z.onclick=()=>zoomParc(p.id);
+      d.querySelector('[data-editp]').onclick=()=>{ S.parcEdit={id:p.id}; renderParc(); window.scrollTo({top:0}); };
     }); });
-  if(hasGeo) drawParcMap(ps);
 }
 
 /* ---------- Commandes et stock ---------- */
@@ -2699,7 +2743,7 @@ function renderPlan(){
 function lotFicheHTML(lot){
   const rows=funnelOf([lot]); const steps=pSteps(lot.id); const costs=steps.reduce((a,e)=>a+(e.cout||0),0), hours=steps.reduce((a,e)=>a+(e.heures||0),0);
   const cmds=pAll('p_cmd').filter(c=>c.lotId===lot.id);
-  return `<div class="etab"><div><b>${esc(S.etab.nom||L('Établissement non renseigné','Establecimiento sin indicar'))}</b>${S.etab.lieu?'<br>'+esc(S.etab.lieu):''}${S.etab.agrement?'<br><span class="small">'+esc(L('N° d\'agrément / enregistrement : ','N° de registro: ')+S.etab.agrement)+'</span>':''}</div>
+  return `<div class="etab"><div>${etabHeadHTML(etabForLot(lot))}</div>
       <div class="small" style="text-align:right">${esc(L('Fiche de traçabilité du lot','Ficha de trazabilidad del lote'))}<br>${esc(L('Éditée le ','Emitida el ')+pdate(new Date().toISOString().slice(0,10)))}</div></div>
     <h2>${esc(L('Lot ','Lote ')+lot.numero+' · '+comboOf(lot))}</h2>
     <section><dl><dt>${esc(L('Saison','Temporada'))}</dt><dd>${esc(lot.saison)}</dd>${lot.cloneG?`<dt>${esc(L('Clone greffon','Clon púa'))}</dt><dd>${esc(lot.cloneG)}</dd>`:''}${lot.clonePG?`<dt>${esc(L('Clone porte-greffe','Clon portainjerto'))}</dt><dd>${esc(lot.clonePG)}</dd>`:''}${lot.destination?`<dt>${esc(L('Destination','Destino'))}</dt><dd>${esc(lot.destination)}</dd>`:''}${hours?`<dt>${esc(L('Travail','Trabajo'))}</dt><dd>${esc(fmtN(hours))} h</dd>`:''}${costs?`<dt>${esc(L('Coûts','Costos'))}</dt><dd>${esc(money(costs))}</dd>`:''}</dl></section>
@@ -2737,15 +2781,20 @@ function summary(ch){
   }
   const lots=entriesOf(ch.id,'lot').sort((a,b)=>a.jour-b.jour);
   if(lots.length){ out.push('','Contrôles par lot'); lots.forEach(r=>out.push('  J'+r.jour+' · Lot '+r.lot+((r.variete||r.pg)?' ('+[r.variete,r.pg].filter(Boolean).join('/')+')':'')+(r.nb?' · '+r.nb+' plants':'')+LOT_KEYS.filter(k=>r[k]).map(k=>' · '+OPTS[k].label+' : '+r[k]).join('')+(r.remarque?' · '+r.remarque:'')+' ('+authorName(r)+')')); }
-  const bl=lotsWithBilan(ch).filter(l=>l.b); if(bl.length){ const ag=aggRate(lotsWithBilan(ch)); out.push('',L('Bilan de fin de chauffe','Balance de fin de calefacción')+' : '+pct(ag.rate)); bl.forEach(l=>out.push('  '+L('Lot ','Lote ')+l.lot+((l.variete||l.pg)?' ('+[l.variete,l.pg].filter(Boolean).join('/')+')':'')+' · '+pct(bilanRate(l.b))+(isPctBilan(l.b)?'':' ('+l.b.bons+'/'+l.b.tries+')')+(l.b.cause?' · '+T(l.b.cause):''))); }
+  const bl=lotsWithBilan(ch).filter(l=>l.b); if(bl.length){ const ag=aggRate(lotsWithBilan(ch)); out.push('',L('Bilan de fin de chauffe','Balance de fin de calefacción')+' : '+pct(ag.rate)); bl.forEach(l=>out.push('  '+L('Lot ','Lote ')+l.lot+((l.variete||l.pg)?' ('+[l.variete,l.pg].filter(Boolean).join('/')+')':'')+' · '+pct(bilanRate(l.b))+(isPctBilan(l.b)?'':' ('+bilanBons(l.b)+'/'+l.b.tries+')')+(l.b.cause?' · '+T(l.b.cause):''))); }
+  if(accOn(ch)){ const a=accOf(ch), fin=accCh(ch); out.push('',L('Acclimatation','Aclimatación')+(a.lieu?' · '+a.lieu:'')+' · '+L('début ','inicio ')+dayLabel(fin,1));
+    for(let j=1;j<=accDur(ch);j++){ if(!accDayFilled(ch,j)) continue; const d=accDayStat(ch,j); const os=accObsDay(ch.id,j); out.push('A'+j+' · '+dayLabel(fin,j)+(d.n?' · T° '+(d.tMin!=null?(d.tMin===d.tMax?fmtN(d.tMin):fmtN(d.tMin)+'–'+fmtN(d.tMax))+' °C':'—')+(d.hMin!=null?' · HR '+(d.hMin===d.hMax?fmtN(d.hMin):fmtN(d.hMin)+'–'+fmtN(d.hMax))+' %':''):''));
+      os.forEach(o=>{ const p=[...(o.actions||[]).map(accActLabel), ...ACC_KEYS.filter(k=>o[k]).map(k=>L(ACC_ETAT[k].fr,ACC_ETAT[k].es)+' : '+accOptLabel(k,o[k]))]; if(p.length) out.push('  '+p.join(' · ')+' ('+authorName(o)+')'); if(o.remarque) out.push('  '+o.remarque); if(o.raison) out.push('  '+L('Raison du problème : ','Causa del problema: ')+o.raison); });
+      const al=accDayAlerts(ch,j); if(al.length) out.push('  ⚠ '+al.join(' ; ')); }
+    const rp=repriseByLot(ch); Object.values(rp).forEach(e=>out.push('  '+L('Lot ','Lote ')+e.lot+' · '+L('reprise ','prendimiento ')+pct(repriseRate(e))+' ('+e.morts+'/'+e.regardes+L(' morts, A',' muertas, A')+e.ajour+')')); }
   return out.join('\n');
 }
 function csv(ch){
   const c=v=>{ const s=v==null?'':String(v); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
   const dec=v=>v==null||v===''?'':String(v).replace('.',',');
-  const rows=[['Jour','Date','Type','Heure','T° pièce (°C)','T° dans palox (°C)','HR pièce (%)','HR palox (%)','O₂ pièce (%)','O₂ palox (%)','Source','Lot','Variété','Porte-greffe','Nb plants','Plants triés','Plants bons','Réussite (%)','Cause rebuts','Produit','Matière active','Dose','Unité','Méthode','Cible','Bouillie (L)',...OBS_KEYS.map(k=>OPTS[k].label),'Remarques','Auteur'].map(T)];
-  const ents=entriesOf(ch.id).filter(e=>e.type!=='photo').sort((a,b)=>a.jour-b.jour||(a.heure||'').localeCompare(b.heure||''));
-  ents.forEach(e=>rows.push(['J'+e.jour, dayShort(ch,e.jour), T({releve:'Relevé',obs:'Observation',lot:'Contrôle lot',bilan:'Bilan',phyto:'Traitement'}[e.type]||e.type), e.heure||'', dec(e.tExt), dec(e.tInt), dec(e.type==='releve'?hOut(e):null), dec(e.type==='releve'?hIn(e):null), dec(e.o2Ext), dec(e.o2Int), e.source==='capteur'?L('capteur','sensor')+' '+(e.capteur||''):'', e.lot||'', e.variete||'', e.pg||'', e.nb??'', e.tries??'', e.bons??'', e.type==='bilan'&&bilanRate(e)!=null?dec(Math.round(bilanRate(e)*1000)/10):'', T(e.cause||''), e.produit||'', e.matiere||'', dec(e.dose), e.unite||'', T(e.methode||''), e.cible||'', dec(e.volume), ...OBS_KEYS.map(k=>T(e[k]||'')), e.remarque||'', e.source==='capteur'?'':authorName(e)]));
+  const rows=[['Jour','Date','Type','Heure','T° pièce (°C)','T° dans palox (°C)','HR pièce (%)','HR palox (%)','O₂ pièce (%)','O₂ palox (%)','Source','Lot','Variété','Porte-greffe','Nb plants','Plants triés','Plants bons','Réussite (%)','Cause rebuts','Produit','Matière active','Dose','Unité','Méthode','Cible','Bouillie (L)',...OBS_KEYS.map(k=>OPTS[k].label),'Remarques','Raison du problème','2e choix','À remettre en chauffe','Date du tri','T° acclim. (°C)','HR acclim. (%)','Actions','Pousses','Feuilles','Plants regardés','Plants morts','Auteur'].map(T)];
+  const dk=e=>e.ajour!=null?1000+e.ajour:(e.jour||0); const fin=accCh(ch); const ents=entriesOf(ch.id).filter(e=>e.type!=='photo').sort((a,b)=>dk(a)-dk(b)||(a.heure||'').localeCompare(b.heure||''));
+  ents.forEach(e=>rows.push([e.ajour!=null?'A'+e.ajour:'J'+e.jour, e.ajour!=null?dayShort(fin,e.ajour):dayShort(ch,e.jour), e.ajour!=null?({accrel:L('Acclim. relevé','Aclim. lectura'),accobs:L('Acclim. observation','Aclim. observación'),reprise:L('Contrôle de reprise','Control de prendimiento')}[e.type]||e.type):T({releve:'Relevé',obs:'Observation',lot:'Contrôle lot',bilan:'Triage',phyto:'Traitement'}[e.type]||e.type), e.heure||'', dec(e.tExt), dec(e.tInt), dec(e.type==='releve'?hOut(e):null), dec(e.type==='releve'?hIn(e):null), dec(e.o2Ext), dec(e.o2Int), e.source==='capteur'?L('capteur','sensor')+' '+(e.capteur||''):'', e.lot||'', e.variete||'', e.pg||'', e.nb??'', e.tries??'', e.bons??'', e.type==='bilan'&&bilanRate(e)!=null?dec(Math.round(bilanRate(e)*1000)/10):'', T(e.cause||''), e.produit||'', e.matiere||'', dec(e.dose), e.unite||'', T(e.methode||''), e.cible||'', dec(e.volume), ...OBS_KEYS.map(k=>T(e[k]||'')), e.remarque||'', e.raison||'', e.c2||'', e.rech||'', e.dateTri||'', e.type==='accrel'?dec(e.t):'', e.type==='accrel'?dec(e.hum):'', (e.actions||[]).map(accActLabel).join(', '), e.pousses?accOptLabel('pousses',e.pousses):'', e.feuilles?accOptLabel('feuilles',e.feuilles):'', e.type==='reprise'?e.regardes:'', e.type==='reprise'?e.morts:'', e.source==='capteur'?'':authorName(e)]));
   return rows.map(r=>r.map(c).join(';')).join('\r\n');
 }
 async function shareFile(file, st, okMsg){
@@ -2801,7 +2850,7 @@ async function importFile(e, st){
 })();
 /* L'app d'origine (même adresse github.io) peut effacer nos fichiers hors ligne quand elle se met à jour :
    on vérifie au démarrage et on les remet en cache si besoin. */
-async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffespro-v3.1.0'; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./leaflet.js','./leaflet.css']); }catch(e){} }
+async function ensureShell(){ try{ if(!('caches' in window) || !navigator.onLine) return; const V='chauffes-pro-v'+APP_VERSION; const c=await caches.open(V); const hit=await c.match(new URL('index.html',location.href).href,{ignoreSearch:true}); if(!hit) await c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png']); }catch(e){} }
 if(location.protocol!=='file:') setTimeout(ensureShell, 4000);
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js').then(reg=>{
