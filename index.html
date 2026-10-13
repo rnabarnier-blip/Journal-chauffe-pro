@@ -48,10 +48,11 @@ h1{font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.0
 .progress{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
 .progress span{display:block;height:100%;background:var(--accent)}
 .endzone{font-size:13px;color:var(--muted)}
-nav.tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;background:var(--sunk);padding:4px;border-radius:10px}
+nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;background:var(--sunk);padding:4px;border-radius:10px}
 nav.tabs button{font:600 13.5px var(--f-body);border:0;background:transparent;color:var(--muted);padding:9px 1px;border-radius:7px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:370px){nav.tabs button{font-size:11.5px}}
 table.mini{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}table.mini th,table.mini td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}table.mini th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}table.mini .small{color:var(--muted);font-size:12px}
+#c-body .tabpart{display:grid;gap:16px}h3.secttl{margin:18px 2px 0;font-size:18px}
 nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 section.panel{display:grid;gap:16px;padding-top:8px}
 h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:4px 0 0}
@@ -295,7 +296,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.6.0';
+const APP_VERSION = '3.7.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -1210,12 +1211,12 @@ function renderChauffe(){
     <div class="endzone">${ch.debut?'Début le '+esc(dayLabel(ch,1))+' · ':''}fin de chauffe prévue entre J${ch.finDe} et J${ch.finA}</div>
     ${syncbarHTML()}
     <nav class="tabs" role="tablist">
-      ${[['jour',L('Chauffe','Calefacción')],['lots','Par lot'],['bilan',L('Triage','Selección')],['acc',L('Acclim.','Aclim.')],['hist','Suivi'],['infos','Infos']].map(([k,l])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}
+      ${[['jour',L('Chauffe','Calefacción')],['bilan',L('Triage','Selección')],['acc',L('Acclim.','Aclim.')],['hist','Suivi'],['infos','Infos']].map(([k,l])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k||(k==='jour'&&S.tab==='lots')}">${l}</button>`).join('')}
     </nav></header>
   <section class="panel" id="c-body"></section>`;
   $('c-back').onclick=()=>go('home'); bindSyncbar();
   app.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; renderChauffe(); window.scrollTo({top:0}); });
-  ({jour:tabJour, hist:tabHist, lots:tabLots, bilan:tabBilan, acc:tabAcclim, infos:tabInfos}[S.tab]||tabJour)(ch, $('c-body'));
+  ({jour:tabChauffe, hist:tabHist, lots:tabChauffe, bilan:tabBilan, acc:tabAcclim, infos:tabInfos}[S.tab]||tabChauffe)(ch, $('c-body'));
 }
 
 function segHTML(id,key,val){ return `<div class="seg" id="${id}">`+OPTS[key].opts.map(o=>`<button type="button" data-v="${esc(o)}" class="${OPTS[key].alert.includes(o)?'alert':''}" aria-pressed="${val===o}">${esc(o)}</button>`).join('')+'</div>'; }
@@ -1262,6 +1263,12 @@ function thermoInputsHTML(TH, pre, cls, avgId, note){ if(!TH.length) return '';
 function thermoAvgText(TV){ const a=thAvg(TV.filter(t=>t.pos==='in').map(t=>t.v)), b=thAvg(TV.filter(t=>t.pos==='ext').map(t=>t.v));
   return (a!=null?esc(L('Moyenne palox : ','Promedio palox: '))+'<b>'+esc(fmtN(a))+' °C</b>':'')+(a!=null&&b!=null?' · ':'')+(b!=null?esc(L('Moyenne air : ','Promedio aire: '))+'<b>'+esc(fmtN(b))+' °C</b>':''); }
 
+/* ----- Onglet Chauffe : saisie du jour + contrôle par lot (comme l'onglet Acclim.) ----- */
+function tabChauffe(ch, body){
+  body.innerHTML=`<div id="c-jour" class="tabpart"></div><h3 class="secttl" id="c-lots-t">${esc(L('Contrôle par lot','Control por lote'))}</h3><div id="c-lots" class="tabpart"></div>`;
+  tabJour(ch, $('c-jour')); tabLots(ch, $('c-lots'));
+  if(S.tab==='lots'){ S.tab='jour'; setTimeout(()=>{ const t=$('c-lots-t'); if(t){ const hd=document.querySelector('header.top'); window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-(hd?hd.offsetHeight:0)-8}); } },30); }
+}
 /* ----- Onglet Saisie ----- */
 function tabJour(ch, body){
   const J=S.jour; const mine=myObs(ch.id,J); const st={}; OBS_KEYS.forEach(k=>st[k]=mine?mine[k]||'':'');
@@ -1508,7 +1515,7 @@ function tabLots(ch, body){
   $('p-form').onsubmit=async e=>{ e.preventDefault(); const lot=$('p-lot').value.trim(); if(!lot){ $('p-st').textContent='Indique le numéro du lot.'; $('p-st').className='status err'; return; }
     const ent={id:uid(), type:'lot', chauffeId:ch.id, jour:Number($('p-jour').value), lot, variete:$('p-var').value.trim(), pg:$('p-pg').value.trim(), nb:num($('p-nb').value), remarque:$('p-rem').value.trim(), photos:photoIds.slice(), auteurId:S.me.id, auteurNom:S.me.nom, creeLe:nowIso()};
     LOT_KEYS.forEach(k=>ent[k]=st[k]||'');
-    try{ await saveEntry(ent); toast('Contrôle du lot '+lot+' ajouté.'); S.jour=ent.jour; renderChauffe(); }catch(err){ $('p-st').textContent='Enregistrement impossible.'; $('p-st').className='status err'; } };
+    try{ await saveEntry(ent); toast('Contrôle du lot '+lot+' ajouté.'); S.jour=ent.jour; S.tab='lots'; renderChauffe(); }catch(err){ $('p-st').textContent='Enregistrement impossible.'; $('p-st').className='status err'; } };
   const list=entriesOf(ch.id,'lot').sort((a,b)=>(b.creeLe||'').localeCompare(a.creeLe||''));
   const el=$('p-list');
   if(!list.length){ el.innerHTML='<div class="item empty">Aucun contrôle par lot pour l\'instant.</div>'; return; }
@@ -1518,7 +1525,7 @@ function tabLots(ch, body){
       <div class="chips">${LOT_KEYS.filter(k=>r[k]).map(k=>`<span class="chip${OPTS[k].alert.includes(r[k])?' al':''}">${esc(OPTS[k].label+' : '+r[k])}</span>`).join('')}</div>${r.remarque?`<div class="rem">${esc(r.remarque)}</div>`:''}`;
     if((r.photos||[]).length){ const g=document.createElement('div'); g.className='photos'; r.photos.forEach(id=>{ const b=document.createElement('button'); b.type='button'; const im=document.createElement('img'); im.alt=''; setPhoto(im,id); b.appendChild(im); b.onclick=()=>openViewer(id,'Lot '+r.lot+' · J'+r.jour,null); g.appendChild(b); }); d.appendChild(g); }
     if(isMine(r)){ const a=document.createElement('div'); a.className='confirm'; const del=document.createElement('button'); del.type='button'; del.className='ghost'; del.textContent='Supprimer'; let c=false;
-      del.onclick=async()=>{ if(!c){ c=true; del.textContent='Toucher encore pour supprimer'; del.classList.add('danger'); return; } await removeEntry(r); for(const id of r.photos||[]){ try{ await DB.del('photos',id); }catch(e){} } toast('Contrôle supprimé.'); renderChauffe(); };
+      del.onclick=async()=>{ if(!c){ c=true; del.textContent='Toucher encore pour supprimer'; del.classList.add('danger'); return; } await removeEntry(r); for(const id of r.photos||[]){ try{ await DB.del('photos',id); }catch(e){} } toast('Contrôle supprimé.'); S.tab='lots'; renderChauffe(); };
       a.appendChild(del); d.appendChild(a); }
     el.appendChild(d); });
 }
