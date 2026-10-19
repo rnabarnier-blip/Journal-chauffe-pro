@@ -302,6 +302,9 @@ section.panel>*{min-width:0}
 .toast.ok{background:var(--ok);color:#fff;font-size:18px;font-weight:700}
 .subseg{display:flex;gap:6px}.subseg button{flex:1}
 .modehint{text-align:center;font-size:14px;color:var(--muted)}
+details.how>summary{cursor:pointer;color:var(--accent);font:600 15px var(--f-body);padding:4px 0;list-style:none}details.how>summary::-webkit-details-marker{display:none}details.how[open]>summary{margin-bottom:6px}
+.stephead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font:700 19px var(--f-body);margin:6px 2px -4px}
+.tapline{font:600 15px var(--f-body);color:var(--muted);margin:0 2px -6px}
 </style>
 </head>
 <body>
@@ -322,7 +325,7 @@ section.panel>*{min-width:0}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.20.0';
+const APP_VERSION = '3.21.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -916,8 +919,42 @@ const qh=k=>`<button type="button" class="qh" data-h="${k}" aria-label="${esc(L(
 function showHelp(k){ let b=$('helpbox'); if(!b){ b=document.createElement('div'); b.id='helpbox'; b.setAttribute('role','dialog'); document.body.appendChild(b); }
   const t=HELP[k]; if(!t) return; b.innerHTML=`<div>${esc(S.lang==='es'?t[1]:t[0])}</div><button class="primary" type="button" id="helpok">${esc(L("OK, compris","OK, entendido"))}</button>`; b.hidden=false; $('helpok').onclick=()=>{ b.hidden=true; }; }
 document.addEventListener('click',e=>{ const q=e.target.closest&&e.target.closest('.qh'); if(!q) return; e.preventDefault(); e.stopPropagation(); showHelp(q.dataset.h); },true);
+/* ---------- Replier après coup des cartes déjà dessinées ; les graphiques sont redessinés à l'ouverture ---------- */
+function wrapFold(els, key, title, badge, openDef, redraw){ els=(Array.isArray(els)?els:[els]).filter(Boolean); if(!els.length) return null;
+  const open=S.folds[key]!=null?S.folds[key]:!!openDef; const d=document.createElement('details'); d.className='fold'; d.dataset.fold=key; if(open) d.open=true;
+  d.innerHTML=`<summary><span>${title}</span>${badge?`<span class="fbadge">${esc(String(badge))}</span>`:''}</summary><div class="foldin"></div>`;
+  els[0].parentNode.insertBefore(d,els[0]); const inn=d.querySelector('.foldin'); els.forEach(e=>inn.appendChild(e));
+  if(redraw){ const was=open; d.addEventListener('toggle',()=>{ if(d.open&&!was){ S.folds[key]=true; const y=window.scrollY; renderChauffe(); window.scrollTo({top:y}); } }); }
+  return d; }
+const howHTML=(html,lab)=>`<details class="how"><summary>ℹ️ ${esc(lab||L('Comment ça marche ?','¿Cómo funciona?'))}</summary>${html}</details>`;
+function tilesHTML(id,items){ return `<div class="tileshead">${esc(L('Que veux-tu faire ?','¿Qué quieres hacer?'))}</div><div class="tiles" id="${id}">${items.map(([q,ic,l])=>`<button type="button" data-q="${q}">${ic}<span>${esc(l)}</span></button>`).join('')}</div>`; }
+function goEl(el){ if(!el) return; const hd=document.querySelector('header.top'); window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-(hd?hd.offsetHeight:0)-10, behavior:'smooth'}); }
+function openFoldK(k){ S.folds[k]=true; const d=document.querySelector('details[data-fold="'+k+'"]'); if(d) d.open=true; return d; }
+const pastHTML=(ok,txtOk,txtTodo)=>ok?`<span class="pastille ok">✅ ${esc(txtOk)}</span>`:`<span class="pastille todo">🟠 ${esc(txtTodo)}</span>`;
+function simplifyTab(ch, body){
+  const cardWith=sel=>{ const e=body.querySelector(sel); return e?e.closest('.card'):null; };
+  const cardTitled=re=>[...body.querySelectorAll(':scope > .card, .tabpart > .card')].find(c=>{ const h=c.querySelector('h3'); return h&&re.test(h.textContent.trim()); });
+  if(S.tab==='hist'){
+    const share=cardWith('#g-reg'); if(share){ const h=share.querySelector('h3'); if(h) h.textContent=L('Registre PDF et partage','Registro PDF y compartir'); body.insertBefore(share, body.firstChild); }
+    wrapFold(body.querySelector('[id^="thc-"]'), 'hth', '🌡️ '+esc(L('Courbes par thermomètre','Curvas por termómetro')), '', false, true);
+    wrapFold(cardWith('#chart'), 'htemp', '📈 '+esc(L('Températures (chaque relevé)','Temperaturas (cada lectura)')), '', false, true);
+    wrapFold(cardWith('#h-view')||cardTitled(/Humidit/), 'hhum', '💧 '+esc(L('Humidité','Humedad')), '', false, true);
+    wrapFold(cardWith('#o-view')||cardTitled(/Oxyg|Oxíg/), 'ho2', '🫧 '+esc(L('Oxygène','Oxígeno')), '', false, true);
+    const days=$('g-days'); if(days){ const p=days.previousElementSibling; wrapFold([p&&p.tagName==='P'?p:null, days], 'hdays', '📅 '+esc(L('Jour par jour','Día por día')), days.children.length?ch.duree+' '+L('jours','días'):'', false, false); }
+  }
+  if(S.tab==='bilan'){
+    wrapFold($('b-histo'), 'bhisto', '📊 '+esc(L('Graphique par lot','Gráfico por lote')), '', false, true);
+    wrapFold($('b-addcard'), 'badd', '➕ '+esc(L("Lot qui n'est pas dans la liste",'Lote que no está en la lista')), '', false, false);
+  }
+  if(S.tab==='infos'){
+    const ph=cardTitled(/phytosanitaires|fitosanitarios/); wrapFold(ph, 'iphyto', '💧 '+esc(L('Traitements de la chauffe','Tratamientos de la calefacción')), phytosOf(ch.id).length||'', false, false);
+    const pe=$('i-pedit'); if(pe){ const hh=pe.closest('.hhead'); wrapFold([hh,$('i-pintro'),$('i-proto')], 'iproto', '📋 '+esc(L('Protocole de contrôle','Protocolo de control')), '', !!S.editingProto, false); }
+    wrapFold(cardTitled(/^Quand prévenir|^Cuándo avisar/), 'iprev', '⚠️ '+esc(L('Quand prévenir','Cuándo avisar')+' '+S.prevenir), '', false, false);
+    wrapFold(cardTitled(/soudure|soldadura/i), 'isoud', '🌿 '+esc(L('La soudure (explications)','La soldadura (explicaciones)')), '', false, false);
+  }
+}
 /* ---------- Boutons − / + sur les températures ---------- */
-function addSteppers(inputs, lastOf){ inputs.forEach(inp=>{ if(!inp||inp.type==='hidden'||inp.closest('.stepper')) return; const last=lastOf(inp); if(last!=null) inp.placeholder=L('dernier ','último ')+fmtN(last);
+function addSteppers(inputs, lastOf){ inputs.forEach(inp=>{ if(!inp||inp.type==='hidden'||inp.closest('.stepper')) return; const last=lastOf(inp); if(last!=null){ inp.placeholder=fmtN(last); inp.title=L('Dernier relevé : ','Última lectura: ')+fmtN(last)+' °C'; }
   const w=document.createElement('div'); w.className='stepper'; inp.parentNode.insertBefore(w,inp);
   const mk=(t,d)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; b.setAttribute('aria-label',(d>0?'+':'−')+'0,5 °C'); b.onclick=()=>{ let v=num(inp.value); v=(v==null?(last!=null?last:20):v)+d; v=Math.round(v*10)/10; inp.value=String(v).replace('.',','); inp.dispatchEvent(new Event('input',{bubbles:true})); }; return b; };
   w.append(mk('−',-0.5),inp,mk('+',0.5)); }); }
@@ -1314,6 +1351,7 @@ function renderChauffe(){
   if(S.tab==='dec'||S.tab==='bilan'){ S.apresSub=S.tab; tbody.innerHTML=`<div class="seg subseg" role="group">${[['dec',L('Décaissage','Desencajonado')],['bilan',L('Triage','Selección')]].map(([k,l])=>`<button type="button" data-tab="${k}" aria-pressed="${S.tab===k}">${esc(l)}</button>`).join('')}</div><div id="c-sub" class="tabpart"></div>`;
     tbody.querySelectorAll('.subseg button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; renderChauffe(); window.scrollTo({top:0}); }); tbody=$('c-sub'); }
   ({gref:tabGreffage, jour:tabChauffe, hist:tabHist, lots:tabChauffe, bilan:tabBilan, acc:(c,b)=>tabAcclim(c,b,'avant'), dec:tabDecaissage, infos:tabInfos}[S.tab]||tabChauffe)(ch, tbody);
+  simplifyTab(ch, $('c-body'));
   $('c-body').insertAdjacentHTML('afterbegin',`<div class="tabhelp">${esc(L('Que faire ici ?','¿Qué hacer aquí?'))}${qh(hk)}</div>`);
 }
 
@@ -1753,16 +1791,18 @@ function tabAcclim(ch, body, phase){
       <div class="rem">${esc(L('Du ','Del ')+dayLabel(fin,1)+L(' · prévu ',' · previsto ')+plural(accDur(X),'jour','jours','día','días'))}${X.fin?' · '+esc(L('fin le ','fin el ')+X.fin.split('-').reverse().join('/')):''}</div>
       
       ${accSeuilsText(X)?`<div class="seuilsline">${esc(accSeuilsText(X))}</div>`:''}</div>`}
-    ${accRels(ch,X).length?fold('acharts', '📈 '+esc(L('Courbes','Curvas')), '', accChartsBlock(ch,X)):''}
+    ${accRels(ch,X).length&&!isSimple()?fold('acharts', '📈 '+esc(L('Courbes','Curvas')), '', accChartsBlock(ch,X)):''}
     <div class="field"><span class="lab">${esc(L('Jour','Día'))}</span><div class="dates" id="a-dates"></div></div>
+    ${tilesHTML('a-tiles',[['temp','🌡️',L('Températures','Temperaturas')],['etat','👀',L('État et actions','Estado y acciones')],['note','📝',L('Note','Nota')],['rep','🌱',L('Reprise','Prendimiento')]])}
     ${accPresCardHTML(ch,X,A)}
     <form class="card" id="a-form" autocomplete="off">
       <div class="hhead"><h3>A${A} · ${esc(dayLabel(fin,A))}</h3><span class="mono">${esc(accName(ch,X))}</span></div>
+      <div>${pastHTML(rels.length,L('Relevé fait ce jour','Lectura hecha este día')+' ('+rels.length+')',L('Pas encore de relevé ce jour','Todavía sin lectura este día'))}</div>
       <div class="field">
-        <span class="lab">${esc(L('Relevés','Lecturas'))}</span>
+        <span class="lab" id="a-relt">${esc(L('Relevés','Lecturas'))}${qh('rel')}</span>
         <div class="list" id="a-rels"></div>
         <div class="field"><label for="a-h">${esc(L('Heure du relevé','Hora de la lectura'))}</label><input id="a-h" type="time" value="${hhmm()}"></div>
-        ${S.thEdit==='acc'?thermoManagerHTML(ch):`<button class="linkbtn" type="button" id="a-thm">${esc(thermosAcc().length?L('Thermomètres : ','Termómetros: ')+thermosAcc().map(t=>t.nom).join(', ')+L(' · Gérer',' · Gestionar'):L('Plusieurs thermomètres ? Donne-leur un nom','¿Varios termómetros? Ponles un nombre'))}</button>`}
+        ${S.thEdit==='acc'?thermoManagerHTML(ch):isSimple()?'':`<button class="linkbtn" type="button" id="a-thm">${esc(thermosAcc().length?L('Thermomètres : ','Termómetros: ')+thermosAcc().map(t=>t.nom).join(', ')+L(' · Gérer',' · Gestionar'):L('Plusieurs thermomètres ? Donne-leur un nom','¿Varios termómetros? Ponles un nombre'))}</button>`}
         ${thermoInputsHTML(thermosAcc(),'a-th-','ath','a-thavg',L("Laisse vide un thermomètre qui n'est pas dans ce lieu.","Deja vacío un termómetro que no está en este lugar."))}
         ${thermosAcc().length?'<input id="a-t" type="hidden"><input id="a-ti" type="hidden">':`<div class="two"><div class="field"><label for="a-ti">${esc(L('T° dans le palox (°C)','T° dentro del palox (°C)'))}</label><input id="a-ti" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div>
         <div class="field"><label for="a-t">${esc(L("T° de l'air (°C)",'T° del aire (°C)'))}</label><input id="a-t" class="num" type="text" inputmode="decimal" enterkeyhint="done" placeholder="°C"></div></div>`}
@@ -1770,7 +1810,7 @@ function tabAcclim(ch, body, phase){
         <span class="ex">${esc(L("Ex. : 15h · palox 24 °C · air 27 °C · 65 %. Une seule valeur suffit.","Ej.: 15h · palox 24 °C · aire 27 °C · 65 %. Basta con un valor."))}</span>
         <button class="primary" id="a-addrel" type="button">${esc(L('+ Ajouter ce relevé','+ Agregar esta lectura'))}</button>
       </div>
-      <div class="field"><span class="lab">${esc(L('Actions du jour','Acciones del día'))} <span class="hint">${esc(L('(plusieurs possibles)','(varias posibles)'))}</span></span><div class="seg" id="a-acts">${ACC_ACTIONS.map(x=>`<button type="button" data-v="${esc(x[0])}" aria-pressed="${acts.has(x[0])}">${esc(L(x[1],x[2]))}</button>`).join('')}</div></div>
+      <div class="field" id="a-etat"><span class="lab">${esc(L('Actions du jour','Acciones del día'))} <span class="hint">${esc(L('(plusieurs possibles)','(varias posibles)'))}</span></span><div class="seg" id="a-acts">${ACC_ACTIONS.map(x=>`<button type="button" data-v="${esc(x[0])}" aria-pressed="${acts.has(x[0])}">${esc(L(x[1],x[2]))}</button>`).join('')}</div></div>
       ${ACC_KEYS.map(k=>`<div class="field"><span class="lab">${esc(L(ACC_ETAT[k].fr,ACC_ETAT[k].es))}</span><div class="seg" id="aseg-${k}">${ACC_ETAT[k].opts.map(o=>`<button type="button" data-v="${esc(o[0])}" class="${ACC_ETAT[k].alert.includes(o[0])?'alert':''}" aria-pressed="${st[k]===o[0]}">${esc(L(o[1],o[2]))}</button>`).join('')}</div></div>`).join('')}
       <div class="field"><label for="a-rem">${esc(L('Remarques','Observaciones'))}</label><textarea id="a-rem" placeholder="${esc(L("Ce que tu as fait ou remarqué aujourd'hui","Lo que hiciste o notaste hoy"))}">${esc(mine.remarque||'')}</textarea><span class="ex">${esc(L('Ex. : ombrière ouverte le matin, arrosage 10 min à 17h.','Ej.: malla sombra abierta en la mañana, riego 10 min a las 17h.'))}</span></div>
       <div id="a-alert" class="alertbox" hidden></div>
@@ -1839,6 +1879,14 @@ function tabAcclim(ch, body, phase){
   document.querySelectorAll('.ath').forEach(el=>{ el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addRel(); } }); el.addEventListener('input',()=>{ $('a-thavg').innerHTML=thermoAvgText(athVals()); }); });
   if($('a-thm')) $('a-thm').onclick=()=>{ S.thEdit='acc'; S.thDraft=thermosPhase('acc').map(t=>Object.assign({},t)); if(!S.thDraft.length) S.thDraft.push({id:'thermo:'+uid(), nom:'', pos:'ext'}); renderChauffe(); setTimeout(()=>{ const m=$('th-man'); if(m) m.scrollIntoView({block:'start'}); },30); };
   bindThermoManager(ch);
+  { const man=accRels(ch,X).slice().sort((a,b)=>(a.ajour-b.ajour)||(a.heure||'').localeCompare(b.heure||'')||(a.creeLe||'').localeCompare(b.creeLe||''));
+    const lastV=f=>{ for(let i=man.length-1;i>=0;i--){ const v=f(man[i]); if(v!=null) return v; } return null; };
+    addSteppers([$('a-ti'),$('a-t'),...document.querySelectorAll('.ath')], inp=>{ if(inp.id==='a-t') return lastV(r=>r.t); if(inp.id==='a-ti') return lastV(r=>r.tIn); const id=inp.id.slice(5); return lastV(r=>{ const t=(r.thermos||[]).find(x=>x.id===id); return t?t.v:null; }); });
+    $('a-tiles').querySelectorAll('button').forEach(b=>b.onclick=()=>{ const q=b.dataset.q;
+      if(q==='temp'){ const inp=[...document.querySelectorAll('.ath')][0]||($('a-ti').type!=='hidden'?$('a-ti'):null); goEl($('a-relt')); if(inp) inp.focus({preventScroll:true}); }
+      else if(q==='etat') goEl($('a-etat'));
+      else if(q==='note'){ const d=openFoldK('anotes'); goEl(d); const t=$('n-txt'); if(t) t.focus({preventScroll:true}); }
+      else if(q==='rep'){ const d=openFoldK('arep'); goEl(d); const t=$('r-lot'); if(t) t.focus({preventScroll:true}); } }); }
   $('a-form').onsubmit=async e=>{ e.preventDefault(); if(pending()) return addRel();
     try{ await saveObs(); toast(L('Journée enregistrée.','Día guardado.')); renderChauffe(); }catch(err){ $('a-st').textContent=L('Enregistrement impossible.','No se pudo guardar.'); $('a-st').className='status err'; } };
   // reprise
@@ -1981,7 +2029,7 @@ function decCardHTML(ch){
   return `<div class="card" style="gap:10px" id="dec-card">
     <div class="field"><label for="dec-sortie">${esc(L('Date de sortie de chauffe','Fecha de salida de la calefacción'))}</label><input id="dec-sortie" type="date" value="${esc(ch.sortie||'')}"></div>
     <div class="hhead"><h3>${esc(L('Décaissage','Desencajonado'))}</h3><span class="mono">${esc(done.length+' / '+lots.length+' '+L('lots','lotes'))}</span></div>
-    <p class="note">${esc(L("À la sortie de chauffe, note pour chaque lot combien de palox ont été vidés et combien ont été re-remplis pour l'acclimatation (0,5 = un demi-palox). L'app calcule le % de palox gardés. Pas besoin de compter les plants.","Al salir de la calefacción, anota por lote cuántos palox se vaciaron y cuántos se volvieron a llenar para la aclimatación (0,5 = medio palox). La app calcula el % de palox conservados. No hace falta contar plantas."))}</p>
+    ${howHTML('<p class="note">'+esc(L("À la sortie de chauffe, note pour chaque lot combien de palox ont été vidés et combien ont été re-remplis pour l'acclimatation (0,5 = un demi-palox). L'app calcule le % de palox gardés. Pas besoin de compter les plants.","Al salir de la calefacción, anota por lote cuántos palox se vaciaron y cuántos se volvieron a llenar para la aclimatación (0,5 = medio palox). La app calcula el % de palox conservados. No hace falta contar plantas."))+'</p>')}
     ${done.length?`<div class="raterow"><span class="rk">${esc(L('Total','Total'))}</span>${rateBar(Math.min(1,ag.rate||0))}<span class="rv mono">${pct(ag.rate)}</span></div><div class="rem">${esc(fmtN(ag.pRem)+L(' palox re-remplis sur ',' palox rellenados de ')+fmtN(ag.pDec)+L(' décaissés',' vaciados'))}</div>`:''}
     ${open?`${grpHTML(L('Par place dans la chambre','Por lugar en la cámara'),'place')}${grpHTML(L('Par jour de décaissage','Por día de desencajonado'),'jour')}${grpHTML(L('Par porte-greffe','Por portainjerto'),'pg')}
     <div class="list" id="dec-list"></div>
@@ -2037,8 +2085,9 @@ function bindDecCard(ch){
 /* Onglet Décaissage : sortie des palox, puis acclimatation dehors (porche, toile…) avant la plantation. */
 function decDateISO(ch){ const js=entriesOf(ch.id,'decaisse').map(e=>e.jour).filter(Boolean); if(!js.length||!ch.debut) return ch.sortie||''; const d=dayDate(ch,Math.max(...js)); return d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'):(ch.sortie||''); }
 function tabDecaissage(ch, body){
-  body.innerHTML=`<div id="c-dec" class="tabpart"></div><h3 class="secttl">${esc(L('Acclimatation après décaissage','Aclimatación después del desencajonado'))}</h3><div id="c-acc" class="tabpart"></div>`;
-  $('c-dec').innerHTML=decCardHTML(ch); bindDecCard(ch);
+  const dl=decLots(ch), dd=dl.filter(l=>l.d).length;
+  body.innerHTML=`<div class="stephead"><span>① ${esc(L('Décaissage','Desencajonado'))}</span>${dl.length?pastHTML(dd>=dl.length,L('Tous les lots faits','Todos los lotes hechos'),dd+' / '+dl.length+' '+L('lots faits','lotes hechos')):''}</div><div id="c-dec" class="tabpart"></div><div class="stephead"><span>② ${esc(L('Acclimatation dehors','Aclimatación afuera'))}</span></div><div id="c-acc" class="tabpart"></div>`;
+  $('c-dec').innerHTML=decCardHTML(ch); bindDecCard(ch); { const h=document.querySelector('#dec-card > .hhead'); if(h) h.remove(); }
   tabAcclim(ch, $('c-acc'), 'apres');
 }
 function decRegistreHTML(ch){
@@ -2084,9 +2133,10 @@ function tabGreffage(ch, body){
   const tq=lots.reduce((a,l)=>a+(l.qte||0),0), tp=Math.round(lots.reduce((a,l)=>a+(Number(l.palox)||0),0)*100)/100;
   const tc=lots.reduce((a,l)=>{ const e=grefOf(ch.id,l.lot); return a+(e&&e.casse>0?e.casse:0); },0);
   body.innerHTML=`
-    <p class="note">${esc(L("Note ici chaque lot au moment du greffage : il devient un lot de la chauffe (plus besoin d'Excel). Les infos de greffage, de paraffinage et de préparation des bois sont facultatives et vont dans le registre PDF.","Anota aquí cada lote en el momento del injerto: pasa a ser un lote de la calefacción (sin necesidad de Excel). La información de injerto, parafinado y preparación de la madera es opcional y va al registro PDF."))}</p>
+    ${howHTML('<p class="note">'+esc(L("Note ici chaque lot au moment du greffage : il devient un lot de la chauffe (plus besoin d'Excel). Les infos de greffage, de paraffinage et de préparation des bois sont facultatives et vont dans le registre PDF.","Anota aquí cada lote en el momento del injerto: pasa a ser un lote de la calefacción (sin necesidad de Excel). La información de injerto, parafinado y preparación de la madera es opcional y va al registro PDF."))+'</p>')}
     <div class="card" style="gap:6px"><div class="hhead"><h3>${esc(L('Lots greffés','Lotes injertados'))}</h3><span class="mono">${lots.length} ${esc(L('lots','lotes'))}</span></div>
       <div class="rem">${esc(fmtN(tq)+' '+L('plants greffés','plantas injertadas')+(tp?' · '+fmtN(tp)+' palox':''))}${tc?' · '+esc(fmtN(tc)+' '+L('casses','quiebres')+' ('+pct(tc/(tq+tc))+')'):''}</div>
+      ${lots.length?'<div>'+(()=>{ const n=lots.filter(l=>grefOf(ch.id,l.lot)).length; return pastHTML(n>=lots.length,L('Infos de greffage notées pour tous les lots','Información de injerto anotada para todos los lotes'),n+' / '+lots.length+' '+L('lots avec infos de greffage','lotes con información de injerto')); })()+'</div>':''}
       ${ed?'':`<button class="primary" type="button" id="g-new">${esc(L('+ Ajouter un lot greffé','+ Agregar un lote injertado'))}</button>`}</div>
     <div id="g-form"></div>
     <div class="list" id="g-list"></div>`;
@@ -2805,7 +2855,7 @@ function tabBilan(ch, body){
   const groups=key=>{ const m={}; lots.forEach(l=>{ const k=l[key]||'?'; (m[k]=m[k]||[]).push(l); }); return Object.entries(m).map(([k,ls])=>({k, a:aggRate(ls)})).filter(x=>x.a.rate!=null).sort((a,b)=>b.a.rate-a.a.rate); };
   const grpHTML=(title,key)=>{ const g=groups(key); if(g.length<1) return ''; return `<div class="field"><span class="lab">${esc(title)}</span><div class="ratelist">${g.map(x=>`<div class="raterow"><span class="rk">${esc(x.k)}</span>${rateBar(x.a.rate)}<span class="rv mono">${pct(x.a.rate)}</span></div>`).join('')}</div></div>`; };
   body.innerHTML=`
-    <p class="note">${esc(L("Le triage se fait après l'arrachage en pépinière. Pour chaque lot, note les plants bons (1er et 2e choix). La réussite = plants bons ÷ plants greffés du lot. L'app la compare d'un lot à l'autre et d'une saison à l'autre (Accueil → Comparer les saisons).","La selección se hace después del arranque en vivero. Para cada lote, anota las plantas buenas (1ª y 2ª). El éxito = plantas buenas ÷ plantas injertadas del lote. La app lo compara entre lotes y de una temporada a otra (Inicio → Comparar temporadas)."))}</p>
+    ${howHTML('<p class="note">'+esc(L("Le triage se fait après l'arrachage en pépinière. Pour chaque lot, note les plants bons (1er et 2e choix). La réussite = plants bons ÷ plants greffés du lot. L'app la compare d'un lot à l'autre et d'une saison à l'autre (Accueil → Comparer les saisons).","La selección se hace después del arranque en vivero. Para cada lote, anota las plantas buenas (1ª y 2ª). El éxito = plantas buenas ÷ plantas injertadas del lote. La app lo compara entre lotes y de una temporada a otra (Inicio → Comparar temporadas)."))+'</p>')}
     <div class="card">
       <div class="hhead"><h3>${esc(L('Réussite de la chauffe','Éxito de la calefacción'))}</h3><span class="mono">${esc(plural(done,'lot','lots','lote','lotes'))} / ${lots.length}</span></div>
       <div class="bigrate">${pct(agg.rate)}</div>
@@ -2814,9 +2864,10 @@ function tabBilan(ch, body){
       ${grpHTML(L('Par variété','Por variedad'),'variete')}
       <div class="field"><label for="b-date">${esc(L('Date de sortie de chauffe','Fecha de salida de la calefacción'))}</label><input id="b-date" type="date" value="${esc(ch.sortie||'')}"></div>
     </div>
-    ${done?`<div class="card" style="gap:10px"><h3>${esc(L('Réussite par lot','Éxito por lote'))}</h3>${histoSVG(ch,false)}<p class="note">${esc(L('Chaque barre est un lot, colorée selon son porte-greffe. Le trait pointillé est la moyenne de la chauffe.','Cada barra es un lote, coloreada según su portainjerto. La línea punteada es el promedio de la calefacción.'))}</p></div>`:''}
+    ${done?`<div class="card" style="gap:10px" id="b-histo"><h3>${esc(L('Réussite par lot','Éxito por lote'))}</h3>${histoSVG(ch,false)}<p class="note">${esc(L('Chaque barre est un lot, colorée selon son porte-greffe. Le trait pointillé est la moyenne de la chauffe.','Cada barra es un lote, coloreada según su portainjerto. La línea punteada es el promedio de la calefacción.'))}</p></div>`:''}
+    ${lots.length?`<p class="tapline">👇 ${esc(L('Touche un lot pour noter son triage','Toca un lote para anotar su selección'))}</p>`:''}
     <div class="list" id="b-list"></div>
-    <div class="card" style="gap:10px">
+    <div class="card" style="gap:10px" id="b-addcard">
       <span class="lab">${esc(L('Ajouter un lot qui n\'est pas dans la liste','Agregar un lote que no está en la lista'))}</span>
       <div class="three"><div class="field"><label for="b-nl">${esc(L('N° du lot','N° de lote'))}</label><input id="b-nl" type="text" inputmode="numeric"></div><div class="field"><label for="b-nv">${esc(L('Variété','Variedad'))}</label><input id="b-nv" type="text"></div><div class="field"><label for="b-np">${esc(L('Porte-greffe','Portainjerto'))}</label><input id="b-np" type="text"></div></div>
       <button class="ghost" type="button" id="b-add">${esc(L('+ Saisir le bilan de ce lot','+ Ingresar el balance de este lote'))}</button>
