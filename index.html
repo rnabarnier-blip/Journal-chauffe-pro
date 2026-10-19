@@ -304,6 +304,54 @@ section.panel>*{min-width:0}
 .modehint{text-align:center;font-size:14px;color:var(--muted)}
 details.how>summary{cursor:pointer;color:var(--accent);font:600 15px var(--f-body);padding:4px 0;list-style:none}details.how>summary::-webkit-details-marker{display:none}details.how[open]>summary{margin-bottom:6px}
 .stephead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font:700 19px var(--f-body);margin:6px 2px -4px}
+body.ui2{--phase:#7a2e3e;--phase-soft:#f1dde2}
+body.ui2[data-ph="jour"],body.ui2[data-ph="lots"]{--phase:#c2541b;--phase-soft:#fbe4d6}
+body.ui2[data-ph="acc"]{--phase:#2f7a4f;--phase-soft:#dcefe3}
+body.ui2[data-ph="dec"],body.ui2[data-ph="bilan"]{--phase:#8a5a2b;--phase-soft:#f1e3d3}
+body.ui2[data-ph="gref"]{--phase:#5d7a1f;--phase-soft:#e7efd3}
+body.ui2[data-ph="hist"],body.ui2[data-ph="infos"]{--phase:#3d5f99;--phase-soft:#dde6f5}
+@media (prefers-color-scheme: dark){body.ui2{--phase:#e0939f;--phase-soft:#45262d}body.ui2[data-ph="jour"],body.ui2[data-ph="lots"]{--phase:#f08a52;--phase-soft:#46291a}body.ui2[data-ph="acc"]{--phase:#6fbf8a;--phase-soft:#20392a}body.ui2[data-ph="dec"],body.ui2[data-ph="bilan"]{--phase:#d6a571;--phase-soft:#3d2c1b}body.ui2[data-ph="gref"]{--phase:#a9c96a;--phase-soft:#2f3a1a}body.ui2[data-ph="hist"],body.ui2[data-ph="infos"]{--phase:#86a8e6;--phase-soft:#1f2b40}}
+body.ui2.inch{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}
+body.ui2 .card{border-radius:18px;border-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,.07),0 6px 18px rgba(0,0,0,.05);padding:18px}
+body.ui2 details.fold>summary{border-radius:16px;border-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+body.ui2 button.primary{border-radius:14px;min-height:52px;font-size:17px}
+body.ui2.inch button.primary{background:var(--phase);border-color:var(--phase)}
+body.ui2 input,body.ui2 textarea,body.ui2 select{border-radius:12px}
+body.ui2 header.top{border-bottom:4px solid var(--phase);padding-bottom:10px}
+body.ui2.inch header.top .endzone{display:none}
+body.ui2.inch header.top .progress span{background:var(--phase)}
+body.ui2 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;border-radius:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.08);padding:6px 4px calc(env(safe-area-inset-bottom,0px) + 6px);gap:0;overflow-x:auto;justify-content:space-around}
+body.ui2 nav.tabs button{flex:1 1 0;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px!important;font:600 11.5px var(--f-body);border-radius:12px;white-space:nowrap}
+body.ui2 nav.tabs button .ti{font-size:22px;line-height:1.1}
+body.ui2 nav.tabs button .tlong{display:none}
+body.ui2 nav.tabs button[aria-selected="true"]{background:var(--phase-soft);color:var(--phase);box-shadow:none}
+nav.tabs button .tshort{display:none}body.ui2 nav.tabs button .tshort{display:inline}
+body.ui2 .tiles,body.ui2 .tileshead{display:none}
+#fab{display:none}
+body.ui2 #fab{display:flex;position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);z-index:31;align-items:center;gap:8px;border:0;border-radius:999px;background:var(--phase);color:#fff;font:700 18px var(--f-body);padding:14px 20px 14px 16px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
+body.ui2 #fab b{font-size:26px;line-height:1}
+body.ui2 #fab[hidden]{display:none}
+#sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:71;background:var(--bg);border-radius:22px 22px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);display:grid;gap:12px;max-width:640px;margin:0 auto;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+#sheet .grab{width:44px;height:5px;border-radius:3px;background:var(--line);justify-self:center}
+#sheet h3{margin:0;font-size:20px}
+#sheet .tiles{display:grid}
+#sheet .tiles button{min-height:96px}
+.daynav{display:flex;align-items:center;gap:8px}
+.daynav button.arr{flex:0 0 56px;height:56px;border-radius:16px;border:0;background:var(--phase-soft);color:var(--phase);font:700 30px var(--f-body);cursor:pointer}
+.daynav button.arr:disabled{opacity:.35}
+.daynav .dl{flex:1;text-align:center;display:grid;gap:2px}
+.daynav .dl b{font:700 21px var(--f-body)}
+.daynav .dl small{color:var(--muted);font-size:13px}
+.daynav .tod{border:1px solid var(--phase);color:var(--phase);background:transparent;border-radius:999px;padding:3px 12px;font:600 13px var(--f-body);justify-self:center;cursor:pointer}
+body.ui2 .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}
+body.ui2 #helpbox{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
+.hello{font:700 24px var(--f-body);margin:2px 2px -4px}
+body.ui2.inch .dates button[aria-pressed="true"]{background:var(--phase);border-color:var(--phase);color:#fff}body.ui2.inch .dates button[aria-pressed="true"] small{color:#fff}
+body.ui2.inch .dates button.done{border-color:var(--phase)}
+body.ui2.inch .seg button[aria-pressed="true"]{border-color:var(--phase);background:var(--phase-soft)}
+body.ui2 #j-form>.hhead h3,body.ui2 #a-form>.hhead h3{display:none}
+body.ui2 .panel{max-width:760px;margin-inline:auto}
 .tapline{font:600 15px var(--f-body);color:var(--muted);margin:0 2px -6px}
 </style>
 </head>
@@ -325,7 +373,7 @@ details.how>summary{cursor:pointer;color:var(--accent);font:600 15px var(--f-bod
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.21.0';
+const APP_VERSION = '3.22.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -890,6 +938,32 @@ const isSimple=()=>S.mode==='simple';
 function setMode(m){ S.mode=m==='simple'?'simple':'complet'; try{ localStorage.setItem(LS+'mode',S.mode); }catch(e){} try{ DB.put('reglages',S.mode,'mode'); }catch(e){} }
 function modeSegHTML(id){ return `<div class="seg" id="${id}" role="group"><button type="button" data-v="simple" aria-pressed="${isSimple()}">${esc(L('Simple','Simple'))}</button><button type="button" data-v="complet" aria-pressed="${!isSimple()}">${esc(L('Complet','Completo'))}</button></div>`; }
 function bindModeSeg(id,after){ const el=$(id); if(!el) return; el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ setMode(b.dataset.v); el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); after&&after(); }); }
+/* ---------- Interface : nouvelle ou classique ---------- */
+try{ S.ui=localStorage.getItem(LS+'ui')||'new'; }catch(e){ S.ui='new'; }
+const isUI2=()=>S.ui!=='classic';
+function setUI(v){ S.ui=v==='classic'?'classic':'new'; try{ localStorage.setItem(LS+'ui',S.ui); }catch(e){} applyUI(); }
+function applyUI(){ document.body.classList.toggle('ui2',isUI2()); document.body.classList.toggle('inch',S.view==='chauffe'); if(S.view==='chauffe') document.body.dataset.ph=S.tab||'jour'; else delete document.body.dataset.ph; const f=$('fab'); if(f&&S.view!=='chauffe') f.hidden=true; }
+function closeSheet(){ const a=$('sheet'), b=$('sheetbg'); if(a) a.remove(); if(b) b.remove(); }
+function openSheet(tiles){ closeSheet(); const bg=document.createElement('div'); bg.id='sheetbg'; bg.onclick=closeSheet; const sh=document.createElement('div'); sh.id='sheet'; sh.setAttribute('role','dialog');
+  sh.innerHTML=`<div class="grab"></div><h3>${esc(L('Que veux-tu ajouter ?','¿Qué quieres agregar?'))}</h3><div class="tiles"></div><button class="ghost" type="button" id="sheet-x">${esc(L('Annuler','Cancelar'))}</button>`;
+  const g=sh.querySelector('.tiles'); tiles.querySelectorAll('button').forEach(o=>{ const b=document.createElement('button'); b.type='button'; b.innerHTML=o.innerHTML; b.onclick=()=>{ closeSheet(); o.click(); }; g.appendChild(b); });
+  document.body.append(bg,sh); $('sheet-x').onclick=closeSheet; }
+/* Améliorations de la nouvelle interface, après chaque rendu d'une chauffe */
+function ui2Enhance(ch){ applyUI(); if(!isUI2()) return;
+  // bouton ＋ Ajouter
+  let fab=$('fab'); if(!fab){ fab=document.createElement('button'); fab.id='fab'; fab.type='button'; document.body.appendChild(fab); }
+  const tiles=$('j-tiles')||$('a-tiles'); fab.hidden=!tiles; fab.innerHTML='<b>＋</b>'+esc(L('Ajouter','Agregar')); fab.onclick=()=>{ const t=$('j-tiles')||$('a-tiles'); if(t) openSheet(t); };
+  // flèches de jour
+  ['j-dates','a-dates'].forEach(id=>{ const strip=$(id); if(!strip||strip.dataset.nav) return; strip.dataset.nav='1';
+    const cur=strip.querySelector('[aria-pressed="true"]'); if(!cur) return; const prev=cur.previousElementSibling, next=cur.nextElementSibling;
+    const h=document.querySelector(id==='j-dates'?'#j-form h3':'#a-form h3'); const lab=h?h.textContent:cur.textContent;
+    const todayS=dayShort({debut:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10)},1);
+    const tb=[...strip.querySelectorAll('button')].find(b=>b.textContent.endsWith(todayS));
+    const nav=document.createElement('div'); nav.className='daynav';
+    nav.innerHTML=`<button type="button" class="arr" aria-label="${esc(L('Jour précédent','Día anterior'))}"${prev?'':' disabled'}>‹</button><div class="dl"><b>${esc(lab)}</b>${tb&&tb!==cur?`<button type="button" class="tod">${esc(L("↩ Revenir à aujourd'hui","↩ Volver a hoy"))}</button>`:tb?`<small>${esc(L("Aujourd'hui","Hoy"))}</small>`:''}</div><button type="button" class="arr" aria-label="${esc(L('Jour suivant','Día siguiente'))}"${next?'':' disabled'}>›</button>`;
+    const [bp,bn]=nav.querySelectorAll('.arr'); bp.onclick=()=>prev&&prev.click(); bn.onclick=()=>next&&next.click(); const bt=nav.querySelector('.tod'); if(bt) bt.onclick=()=>tb.click();
+    const field=strip.closest('.field'); if(field){ field.parentNode.insertBefore(nav,field); const lb=field.querySelector('.lab'); if(lb) lb.textContent=L('Tous les jours','Todos los días'); } });
+}
 /* ---------- Jour d'aujourd'hui dans une chauffe ---------- */
 const sameDay=(a,b)=>a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
 function todayJ(ch){ if(!ch.debut) return null; const d0=dayDate(ch,1); if(!d0) return null; const t=new Date(); t.setHours(12,0,0,0); const j=Math.round((t-d0)/86400000)+1; return j>=1&&j<=ch.duree?j:null; }
@@ -902,7 +976,7 @@ function todayBlockHTML(){ const list=todayChauffes(); if(!list.length) return '
 function bindTodayBlock(){ document.querySelectorAll('[data-today]').forEach(b=>b.onclick=()=>go('chauffe',{chauffeId:b.dataset.today, tab:'jour', jour:Number(b.dataset.j)})); }
 /* ---------- Petites aides « ? » ---------- */
 const HELP={
-  tab_jour:["Chaque jour : touche 🌡️ pour noter les températures, puis ce que tu vois (couverture, bois…). Tu peux ajouter une note ou une photo. À la fin, touche « Enregistrer la journée ».","Cada día: toca 🌡️ para anotar las temperaturas, luego lo que ves (manta, madera…). Puedes agregar una nota o una foto. Al final, toca « Guardar el día »."],
+  tab_jour:["Chaque jour : touche 🌡️ (ou le bouton ＋ Ajouter en bas) pour noter les températures, puis ce que tu vois (couverture, bois…). Tu peux ajouter une note ou une photo. À la fin, touche « Enregistrer la journée ».","Cada día: toca 🌡️ para anotar las temperaturas, luego lo que ves (manta, madera…). Puedes agregar una nota o una foto. Al final, toca « Guardar el día »."],
   tab_acc:["Acclimatation : après la chauffe, les plants passent quelques jours dans un endroit plus frais. Note ici les températures, les notes et la reprise.","Aclimatación: después de la calefacción, las plantas pasan unos días en un lugar más fresco. Anota aquí temperaturas, notas y prendimiento."],
   tab_apres:["Après la chauffe. « Décaissage » : on sort les plants des caisses. « Triage » : après l'arrachage, on compte les bons et les mauvais plants ; le % est calculé sur le nombre de plants greffés.","Después de la calefacción. « Desencajonado »: se sacan las plantas de las cajas. « Selección »: después del arranque se cuentan las plantas buenas y malas; el % se calcula sobre las plantas injertadas."],
   tab_gref:["Greffage : ce qui a été greffé pour cette chauffe (lots, quantités). Ces chiffres servent de base pour calculer la réussite au triage.","Injerto: lo que se injertó para esta calefacción (lotes, cantidades). Estas cifras sirven de base para calcular el éxito en la selección."],
@@ -982,7 +1056,7 @@ function render(){
   if(S.view==='chauffe' && curChauffe()) return renderChauffe();
   S.view='home'; renderHome();
 }
-function go(view, extra){ Object.assign(S,{view},extra||{}); render(); window.scrollTo({top:0}); }
+function go(view, extra){ Object.assign(S,{view},extra||{}); closeSheet(); render(); applyUI(); window.scrollTo({top:0}); }
 
 /* ---------- Premier lancement ---------- */
 function renderWelcome(){
@@ -1012,6 +1086,7 @@ function renderHome(){
   const seedAvail = SEED_CHAUFFE1 && !S.chauffes.some(c=>c.id===SEED_CHAUFFE1.chauffe.id) && !S.seedHidden && !Sync.active();
   app.innerHTML=`<header class="top"><div class="title-row"><h1>${APP_NAME}</h1><button class="ghost" id="h-set" type="button" style="flex:0 0 auto">Réglages</button></div></header>
   <section class="panel">${installHTML()}${syncbarHTML()}
+    ${isUI2()?`<div class="hello">${esc(L('Bonjour ','Hola '))}${esc(S.me.nom)} 👋</div>`:''}
     ${todayBlockHTML()}
     ${seedAvail?`<div class="card"><h3>Chauffe 1 de Raphaël</h3><p class="note">Les relevés et observations de la chauffe 1 (Vivero Richter, octobre 2026), prises par Raphaël, avec la liste des 27 lots, sont prêts à être ajoutés.</p><div class="list"><button class="primary" id="seed-me" type="button">Je suis Raphaël : ajouter à mon nom</button><button class="ghost" id="seed-ok" type="button">Ajouter (notes de Raphaël)</button><button class="ghost" id="seed-no" type="button">Pas maintenant</button></div></div>`:''}
     <div class="card trial"><b>${esc(L('Version d\'essai, séparée de ton Journal de chauffes','Versión de prueba, separada de tu Journal de chauffes'))}</b><span class="note">${esc(L("Ici, rien n'est partagé avec l'app d'origine ni avec l'équipe. Pour essayer avec tes vraies notes : dans le Journal de chauffes, touche « Partager mes notes » et enregistre le fichier dans Fichiers, puis ici touche « Importer » en bas.","Aquí nada se comparte con la app original ni con el equipo. Para probar con tus notas reales: en el Journal de chauffes toca « Partager mes notes » y guarda el archivo en Archivos, luego aquí toca « Importar » abajo."))}</span></div>
@@ -1030,7 +1105,7 @@ function renderHome(){
     <p class="modehint">${esc(isSimple()?L('Mode simple','Modo simple'):L('Mode complet','Modo completo'))} · <button class="linkbtn" type="button" id="h-mode">${esc(isSimple()?L('passer en mode complet','pasar a modo completo'):L('passer en mode simple','pasar a modo simple'))}</button>${qh('mode')}</p>
     <p class="note" style="text-align:center">Notes signées : ${esc(S.me.nom)} · version ${appVer()}</p>
   </section>`;
-  bindTodayBlock(); $('h-mode').onclick=()=>{ setMode(isSimple()?'complet':'simple'); renderHome(); window.scrollTo({top:0}); };
+  applyUI(); bindTodayBlock(); $('h-mode').onclick=()=>{ setMode(isSimple()?'complet':'simple'); renderHome(); window.scrollTo({top:0}); };
   const el=$('h-list');
   if(!list.length) el.innerHTML='<div class="item empty">Aucune chauffe pour l\'instant. Touche « + Nouvelle chauffe » pour commencer.</div>';
   list.forEach(ch=>{
@@ -1282,6 +1357,11 @@ function renderSettings(){
       <div class="status" id="s-st"></div>
     </div>
     <div class="card">
+      <h3>${esc(L('Interface','Interfaz'))}</h3>
+      <div class="seg" id="s-ui" role="group"><button type="button" data-v="new" aria-pressed="${isUI2()}">${esc(L('Nouvelle','Nueva'))}</button><button type="button" data-v="classic" aria-pressed="${!isUI2()}">${esc(L('Classique','Clásica'))}</button></div>
+      <p class="note">${esc(L("Nouvelle : onglets en bas de l'écran, bouton ＋ Ajouter, flèches pour changer de jour. Classique : l'affichage d'avant. Les données ne changent pas.","Nueva: pestañas abajo de la pantalla, botón ＋ Agregar, flechas para cambiar de día. Clásica: la vista de antes. Los datos no cambian."))}</p>
+    </div>
+    <div class="card">
       <h3>${esc(L("Affichage de l'app","Vista de la app"))}${qh('mode')}</h3>
       ${modeSegHTML('s-mode')}
       <p class="note">${esc(L("Simple : seulement la saisie du jour, l'acclimatation et l'après-chauffe. Complet : tout. Rien n'est effacé quand tu changes.","Simple: solo el registro del día, la aclimatación y el después. Completo: todo. Nada se borra al cambiar."))}</p>
@@ -1316,7 +1396,7 @@ function renderSettings(){
     </div>
   </section>`;
   $('s-back').onclick=()=>go('home');
-  bindLangSeg('s-lang'); bindModeSeg('s-mode',()=>toast(isSimple()?L('Mode simple enregistré.','Modo simple guardado.'):L('Mode complet enregistré.','Modo completo guardado.')));
+  bindLangSeg('s-lang'); $('s-ui').querySelectorAll('button').forEach(b=>b.onclick=()=>{ setUI(b.dataset.v); $('s-ui').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); toast(isUI2()?L('Nouvelle interface enregistrée.','Nueva interfaz guardada.'):L('Interface classique enregistrée.','Interfaz clásica guardada.')); }); applyUI(); bindModeSeg('s-mode',()=>toast(isSimple()?L('Mode simple enregistré.','Modo simple guardado.'):L('Mode complet enregistré.','Modo completo guardado.')));
   $('s-eok').onclick=async()=>{ S.etab={nom:$('s-enom').value.trim(), lieu:$('s-elieu').value.trim(), agrement:$('s-eagr').value.trim()}; await DB.put('reglages',S.etab,'etab'); S.devise=$('s-dev').value.trim()||'$'; await DB.put('reglages',S.devise,'devise'); $('s-est').textContent=L('Établissement enregistré.','Establecimiento guardado.'); $('s-est').className='status ok'; };
   if(SYNC_AVAILABLE){ bindSyncbar();
     $('s-code-ok').onclick=async()=>{ const v=$('s-code').value.trim(); await Sync.setCode(v); $('s-cst').textContent=v?'Code enregistré. Envoi et réception des notes en cours…':'Partage automatique désactivé.'; $('s-cst').className='status ok'; };
@@ -1330,7 +1410,7 @@ function renderSettings(){
 
 /* ---------- Vue d'une chauffe ---------- */
 let dirty=false;
-const TABS=()=>[['gref','🌱 '+L('Greffage','Injerto')],['jour','🔥 '+L('Chauffe','Calefacción')],['acc','🌬 '+L('Acclim.','Aclim.')],['dec','📦 '+L('Après la chauffe','Después')],['hist','📊 '+L('Suivi','Seguimiento')],['infos','ℹ️ Infos']].filter(([k])=>!isSimple()||['jour','acc','dec'].includes(k));
+const TABS=()=>[['gref','🌱',L('Greffage','Injerto')],['jour','🔥',L('Chauffe','Calefacción')],['acc','🌬',L('Acclim.','Aclim.')],['dec','📦',L('Après la chauffe','Después'),L('Après','Después')],['hist','📊',L('Suivi','Seguimiento')],['infos','ℹ️','Infos']].filter(([k])=>!isSimple()||['jour','acc','dec'].includes(k));
 function renderChauffe(){
   const ch=curChauffe(); const n=lastDay(ch);
   if(isSimple()&&!['jour','lots','acc','dec','bilan'].includes(S.tab)) S.tab='jour';
@@ -1341,7 +1421,7 @@ function renderChauffe(){
     <div class="endzone">${ch.debut?'Début le '+esc(dayLabel(ch,1))+' · ':''}fin de chauffe prévue entre J${ch.finDe} et J${ch.finA}</div>
     ${syncbarHTML()}
     <nav class="tabs" role="tablist">
-      ${TABS().map(([k,l])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k||(k==='jour'&&S.tab==='lots')||(k==='dec'&&S.tab==='bilan')}">${l}</button>`).join('')}
+      ${TABS().map(([k,ic,l,sh])=>`<button role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k||(k==='jour'&&S.tab==='lots')||(k==='dec'&&S.tab==='bilan')}"><span class="ti">${ic}</span> <span class="${sh?'tlong':''}">${esc(l)}</span>${sh?`<span class="tshort">${esc(sh)}</span>`:''}</button>`).join('')}
     </nav></header>
   <section class="panel" id="c-body"></section>`;
   $('c-back').onclick=()=>go('home'); bindSyncbar();
@@ -1351,7 +1431,7 @@ function renderChauffe(){
   if(S.tab==='dec'||S.tab==='bilan'){ S.apresSub=S.tab; tbody.innerHTML=`<div class="seg subseg" role="group">${[['dec',L('Décaissage','Desencajonado')],['bilan',L('Triage','Selección')]].map(([k,l])=>`<button type="button" data-tab="${k}" aria-pressed="${S.tab===k}">${esc(l)}</button>`).join('')}</div><div id="c-sub" class="tabpart"></div>`;
     tbody.querySelectorAll('.subseg button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; renderChauffe(); window.scrollTo({top:0}); }); tbody=$('c-sub'); }
   ({gref:tabGreffage, jour:tabChauffe, hist:tabHist, lots:tabChauffe, bilan:tabBilan, acc:(c,b)=>tabAcclim(c,b,'avant'), dec:tabDecaissage, infos:tabInfos}[S.tab]||tabChauffe)(ch, tbody);
-  simplifyTab(ch, $('c-body'));
+  simplifyTab(ch, $('c-body')); try{ ui2Enhance(ch); }catch(e){}
   $('c-body').insertAdjacentHTML('afterbegin',`<div class="tabhelp">${esc(L('Que faire ici ?','¿Qué hacer aquí?'))}${qh(hk)}</div>`);
 }
 
