@@ -1,5 +1,5 @@
 // Chauffes Pro — service worker : l'app fonctionne hors ligne.
-const VERSION='chauffes-pro-v3.22.0';
+const VERSION='chauffes-pro-v3.23.0';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png'];
 self.addEventListener('install',e=>{ e.waitUntil(caches.open(VERSION).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting())); });
 self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>(k.startsWith('chauffes-pro-v')||k.startsWith('chauffespro-v'))&&k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });

@@ -347,6 +347,37 @@ body.ui2 #fab[hidden]{display:none}
 body.ui2 .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}
 body.ui2 #helpbox{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 .hello{font:700 24px var(--f-body);margin:2px 2px -4px}
+/* --- Téléphone --- */
+body.ui2:not(.wide) h1{font-size:25px}
+body.ui2:not(.wide) .tabhelp{margin-bottom:-12px}
+body.ui2:not(.wide) .card{padding:16px}
+/* --- Ordinateur / grand écran --- */
+body.ui2.wide .wrap{max-width:1240px;padding-inline:28px}
+body.ui2.wide .panel{max-width:none}
+body.ui2.wide.inch{padding-left:232px;padding-bottom:28px}
+body.ui2.wide #fab{display:none}
+body.ui2.wide nav.tabs{top:0;bottom:0;left:0;right:auto;width:216px;flex-direction:column;justify-content:flex-start;align-items:stretch;padding:20px 12px;gap:4px;border-top:0;border-right:1px solid var(--line);box-shadow:none;overflow-y:auto}
+body.ui2.wide nav.tabs::before{content:attr(data-app);font:700 20px var(--f-display);padding:4px 12px 14px;color:var(--muted)}
+body.ui2.wide nav.tabs button{flex:0 0 auto;flex-direction:row;justify-content:flex-start;gap:12px;font:600 16px var(--f-body);padding:12px 14px!important;min-height:48px}
+body.ui2.wide nav.tabs button .ti{font-size:22px}
+body.ui2.wide nav.tabs button .tlong{display:inline}body.ui2.wide nav.tabs button .tshort{display:none}
+body.ui2.wide nav.tabs button:hover{background:var(--sunk)}
+body.ui2.wide nav.tabs button[aria-selected="true"]{background:var(--phase-soft)}
+body.ui2.wide .tiles{display:grid}body.ui2.wide .tileshead{display:block}
+body.ui2.wide .tiles button{min-height:74px}
+body.ui2.wide .twocol{display:grid!important;grid-template-columns:minmax(0,1.3fr) minmax(320px,1fr);gap:0 22px!important;grid-auto-flow:row dense;align-items:start}
+body.ui2.wide .twocol>*{grid-column:1/-1;margin-bottom:16px}
+body.ui2.wide .twocol>form.card{grid-column:1;grid-row:span 40}
+body.ui2.wide .twocol>details.fold,body.ui2.wide .twocol>.tiles,body.ui2.wide .twocol>.tileshead,body.ui2.wide .twocol>#mv-card,body.ui2.wide .twocol>.colR{grid-column:2}
+body.ui2.wide .twocol>.tileshead{margin-bottom:8px}
+body.ui2.wide #h-list,body.ui2.wide .todaybox{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+body.ui2.wide #g-list,body.ui2.wide #b-list,body.ui2.wide #dec-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start}
+body.ui2.wide .gridcards{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px!important;align-items:start}
+body.ui2.wide .gridcards>*{min-width:0}
+body.ui2.wide .gridcards>.full,body.ui2.wide .gridcards>.tabhelp,body.ui2.wide .gridcards>.subseg,body.ui2.wide .gridcards>details.how,body.ui2.wide .gridcards>p{grid-column:1/-1}
+body.ui2.wide button:not(:disabled):hover{filter:brightness(.97)}
+body.ui2.wide .daynav{max-width:720px}
+body.ui2.wide #sheet{max-width:560px;bottom:auto;top:50%;transform:translateY(-50%);border-radius:22px}
 body.ui2.inch .dates button[aria-pressed="true"]{background:var(--phase);border-color:var(--phase);color:#fff}body.ui2.inch .dates button[aria-pressed="true"] small{color:#fff}
 body.ui2.inch .dates button.done{border-color:var(--phase)}
 body.ui2.inch .seg button[aria-pressed="true"]{border-color:var(--phase);background:var(--phase-soft)}
@@ -373,7 +404,7 @@ body.ui2 .panel{max-width:760px;margin-inline:auto}
    Chaque note = une « entrée » avec id unique, auteur, majLe et
    éventuellement supprime:true (pour que les suppressions se partagent).
    ==================================================================== */
-const APP_VERSION = '3.22.0';
+const APP_VERSION = '3.23.0';
 const appVer = () => APP_VERSION+' '+((typeof S!=='undefined'&&S.lang==='es')?'(prueba)':'(essai)');
 const APP_NAME = 'Chauffes Pro';
 const EXPORT_FORMAT = 'chauffes-pro';
@@ -941,8 +972,12 @@ function bindModeSeg(id,after){ const el=$(id); if(!el) return; el.querySelector
 /* ---------- Interface : nouvelle ou classique ---------- */
 try{ S.ui=localStorage.getItem(LS+'ui')||'new'; }catch(e){ S.ui='new'; }
 const isUI2=()=>S.ui!=='classic';
+try{ S.screen=localStorage.getItem(LS+'screen')||'auto'; }catch(e){ S.screen='auto'; }
+const isWide=()=>S.screen==='desktop'||(S.screen==='auto'&&window.innerWidth>=1000);
+function setScreen(v){ S.screen=['phone','desktop'].includes(v)?v:'auto'; try{ localStorage.setItem(LS+'screen',S.screen); }catch(e){} applyUI(); if(S.view==='chauffe') renderChauffe(); }
+let _wasWide=null; window.addEventListener('resize',()=>{ const w=isWide(); if(w!==_wasWide){ _wasWide=w; applyUI(); if(S.view==='chauffe'&&S.me) renderChauffe(); } });
 function setUI(v){ S.ui=v==='classic'?'classic':'new'; try{ localStorage.setItem(LS+'ui',S.ui); }catch(e){} applyUI(); }
-function applyUI(){ document.body.classList.toggle('ui2',isUI2()); document.body.classList.toggle('inch',S.view==='chauffe'); if(S.view==='chauffe') document.body.dataset.ph=S.tab||'jour'; else delete document.body.dataset.ph; const f=$('fab'); if(f&&S.view!=='chauffe') f.hidden=true; }
+function applyUI(){ document.body.classList.toggle('ui2',isUI2()); _wasWide=isWide(); document.body.classList.toggle('wide',isUI2()&&_wasWide); document.body.classList.toggle('inch',S.view==='chauffe'); if(S.view==='chauffe') document.body.dataset.ph=S.tab||'jour'; else delete document.body.dataset.ph; const f=$('fab'); if(f&&S.view!=='chauffe') f.hidden=true; }
 function closeSheet(){ const a=$('sheet'), b=$('sheetbg'); if(a) a.remove(); if(b) b.remove(); }
 function openSheet(tiles){ closeSheet(); const bg=document.createElement('div'); bg.id='sheetbg'; bg.onclick=closeSheet; const sh=document.createElement('div'); sh.id='sheet'; sh.setAttribute('role','dialog');
   sh.innerHTML=`<div class="grab"></div><h3>${esc(L('Que veux-tu ajouter ?','¿Qué quieres agregar?'))}</h3><div class="tiles"></div><button class="ghost" type="button" id="sheet-x">${esc(L('Annuler','Cancelar'))}</button>`;
@@ -950,6 +985,9 @@ function openSheet(tiles){ closeSheet(); const bg=document.createElement('div');
   document.body.append(bg,sh); $('sheet-x').onclick=closeSheet; }
 /* Améliorations de la nouvelle interface, après chaque rendu d'une chauffe */
 function ui2Enhance(ch){ applyUI(); if(!isUI2()) return;
+  const nav=document.querySelector('nav.tabs'); if(nav) nav.dataset.app=ch.nom;
+  ['j-form','a-form'].forEach(id=>{ const f=$(id); if(f&&f.parentElement) f.parentElement.classList.add('twocol'); });
+  if(['hist','infos'].includes(S.tab)){ const b=$('c-body'); b.classList.add('gridcards'); const ov=b.querySelector('#cb-wrap'); if(ov){ const c=ov.closest('.card'); if(c) c.classList.add('full'); } const ch1=b.querySelector('.card'); if(S.tab==='infos'&&ch1) ch1.classList.add('full'); const sh=b.querySelector('#g-reg'); if(sh&&sh.closest('.card')) sh.closest('.card').classList.add('full'); const pr=b.querySelector('details[data-fold="iproto"]'); if(pr) pr.classList.add('full'); const hd=b.querySelector('details[data-fold="hdays"]'); if(hd) hd.classList.add('full'); }
   // bouton ＋ Ajouter
   let fab=$('fab'); if(!fab){ fab=document.createElement('button'); fab.id='fab'; fab.type='button'; document.body.appendChild(fab); }
   const tiles=$('j-tiles')||$('a-tiles'); fab.hidden=!tiles; fab.innerHTML='<b>＋</b>'+esc(L('Ajouter','Agregar')); fab.onclick=()=>{ const t=$('j-tiles')||$('a-tiles'); if(t) openSheet(t); };
@@ -1358,6 +1396,10 @@ function renderSettings(){
     </div>
     <div class="card">
       <h3>${esc(L('Interface','Interfaz'))}</h3>
+      <span class="lab">${esc(L("Taille d'écran","Tamaño de pantalla"))}</span>
+      <div class="seg" id="s-screen" role="group"><button type="button" data-v="auto" aria-pressed="${S.screen==='auto'}">${esc(L('Automatique','Automático'))}</button><button type="button" data-v="phone" aria-pressed="${S.screen==='phone'}">📱 ${esc(L('Téléphone','Teléfono'))}</button><button type="button" data-v="desktop" aria-pressed="${S.screen==='desktop'}">💻 ${esc(L('Ordinateur','Computador'))}</button></div>
+      <p class="note">${esc(L("Automatique : téléphone sur un petit écran, ordinateur sur un grand écran (ou un iPad à l'horizontale). Ordinateur : onglets à gauche et page sur deux colonnes.","Automático: teléfono en pantalla pequeña, computador en pantalla grande (o iPad horizontal). Computador: pestañas a la izquierda y página en dos columnas."))}</p>
+      <span class="lab">${esc(L('Style','Estilo'))}</span>
       <div class="seg" id="s-ui" role="group"><button type="button" data-v="new" aria-pressed="${isUI2()}">${esc(L('Nouvelle','Nueva'))}</button><button type="button" data-v="classic" aria-pressed="${!isUI2()}">${esc(L('Classique','Clásica'))}</button></div>
       <p class="note">${esc(L("Nouvelle : onglets en bas de l'écran, bouton ＋ Ajouter, flèches pour changer de jour. Classique : l'affichage d'avant. Les données ne changent pas.","Nueva: pestañas abajo de la pantalla, botón ＋ Agregar, flechas para cambiar de día. Clásica: la vista de antes. Los datos no cambian."))}</p>
     </div>
@@ -1396,7 +1438,7 @@ function renderSettings(){
     </div>
   </section>`;
   $('s-back').onclick=()=>go('home');
-  bindLangSeg('s-lang'); $('s-ui').querySelectorAll('button').forEach(b=>b.onclick=()=>{ setUI(b.dataset.v); $('s-ui').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); toast(isUI2()?L('Nouvelle interface enregistrée.','Nueva interfaz guardada.'):L('Interface classique enregistrée.','Interfaz clásica guardada.')); }); applyUI(); bindModeSeg('s-mode',()=>toast(isSimple()?L('Mode simple enregistré.','Modo simple guardado.'):L('Mode complet enregistré.','Modo completo guardado.')));
+  bindLangSeg('s-lang'); $('s-screen').querySelectorAll('button').forEach(b=>b.onclick=()=>{ setScreen(b.dataset.v); $('s-screen').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); toast(L('Taille d\'écran enregistrée.','Tamaño de pantalla guardado.')); }); $('s-ui').querySelectorAll('button').forEach(b=>b.onclick=()=>{ setUI(b.dataset.v); $('s-ui').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); toast(isUI2()?L('Nouvelle interface enregistrée.','Nueva interfaz guardada.'):L('Interface classique enregistrée.','Interfaz clásica guardada.')); }); applyUI(); bindModeSeg('s-mode',()=>toast(isSimple()?L('Mode simple enregistré.','Modo simple guardado.'):L('Mode complet enregistré.','Modo completo guardado.')));
   $('s-eok').onclick=async()=>{ S.etab={nom:$('s-enom').value.trim(), lieu:$('s-elieu').value.trim(), agrement:$('s-eagr').value.trim()}; await DB.put('reglages',S.etab,'etab'); S.devise=$('s-dev').value.trim()||'$'; await DB.put('reglages',S.devise,'devise'); $('s-est').textContent=L('Établissement enregistré.','Establecimiento guardado.'); $('s-est').className='status ok'; };
   if(SYNC_AVAILABLE){ bindSyncbar();
     $('s-code-ok').onclick=async()=>{ const v=$('s-code').value.trim(); await Sync.setCode(v); $('s-cst').textContent=v?'Code enregistré. Envoi et réception des notes en cours…':'Partage automatique désactivé.'; $('s-cst').className='status ok'; };
